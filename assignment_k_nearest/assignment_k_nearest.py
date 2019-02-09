@@ -74,6 +74,7 @@ def main():
                 distances.append(
                     {'index': index, 'distance': CalculateEuclideanDistance(trainingSet['data'][trainingSetIndex], trainingSet['data'][index])})
 
+            # Sort the points by their distances.
             distances = sorted(distances, key=lambda z: z['distance'])[:k]
 
             classifiedPoints = []
