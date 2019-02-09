@@ -1,6 +1,8 @@
 import numpy as np
 import random
+import math
 from collections import Counter
+from operator import itemgetter
 
 # Calculate distance K-nearest, by Wiebe van Breukelen and Kevin Nijmeijer.
 
@@ -47,9 +49,32 @@ def CalculateEuclideanDistance(pointA, pointB):
         return None
     sum = 0
     for i in range(len(pointA)):
-        sum += (pointA[i] - pointB[i])**2
+        sum += math.pow(pointA[i] - pointB[i], 2)
 
-    return sum / len(pointA)
+    return math.sqrt(sum)
+
+
+def GetNeighbours(trainingSet, pointSearch, k):
+    distances = []
+
+    for index in range(len(trainingSet['data'])):
+        distances.append(
+            [index, CalculateEuclideanDistance(
+                trainingSet['data'][index], pointSearch)])
+
+    # Sort the points by their distances.
+    distances.sort(key=itemgetter(1))
+
+    result = []
+    for x in range(k):
+        result.append(distances[x])
+
+    return result
+
+
+def GetMostCommon(classifiedPoints):
+    # Select the most common season within all classified points.
+    return Counter(classifiedPoints).most_common()[0][0]
 
 
 def main():
@@ -61,33 +86,20 @@ def main():
     totalFail = 0
 
     # Check every k from 2 to 63
-    for k in range(2, 64):
-        # Iterate through the whole trainingsset.
-        for trainingSetIndex in range(len(trainingSet['data'])):
-            distances = []
-
-            for index in range(len(trainingSet['data'])):
-                # Skip ourself.
-                if index == trainingSetIndex:
-                    continue
-
-                distances.append(
-                    {'index': index, 'distance': CalculateEuclideanDistance(trainingSet['data'][trainingSetIndex], trainingSet['data'][index])})
-
-            # Sort the points by their distances.
-            distances = sorted(distances, key=lambda z: z['distance'])[:k]
+    for k in range(2, 63):
+        # Iterate through the whole dataset.
+        for index in range(len(dataset['data'])):
+            neighbours = GetNeighbours(trainingSet, dataset['data'][index], k)
 
             classifiedPoints = []
 
             # For each shortest distance, get the matching season out of the set.
-            for distance in distances:
-                classifiedPoints.append(
-                    trainingSet['labels'][distance['index']])
+            for neighbour in neighbours:
+                classifiedPoints.append(trainingSet['labels'][neighbour[0]])
 
-            # Select the most common season within all classified points.
-            mostCommonSeason = Counter(classifiedPoints).most_common()[0][0]
+            result = GetMostCommon(classifiedPoints)
 
-            if mostCommonSeason == trainingSet['labels'][trainingSetIndex]:
+            if result == dataset['labels'][index]:
                 # We guessed it right, the season is correct.
                 totalSuccess += 1
             else:
