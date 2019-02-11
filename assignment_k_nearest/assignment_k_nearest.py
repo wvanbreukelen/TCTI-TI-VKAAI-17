@@ -46,7 +46,7 @@ def ParseDataset(file, isValidationSet):
 def CalculateEuclideanDistance(pointA, pointB):
     # Check if we are dealing with the same number of dimensions.
     if len(pointA) != len(pointB):
-        return None
+        exit()
     sum = 0
     for i in range(len(pointA)):
         sum += math.pow(pointA[i] - pointB[i], 2)
@@ -59,22 +59,18 @@ def GetNeighbours(trainingSet, pointSearch, k):
 
     for index in range(len(trainingSet['data'])):
         distances.append(
-            [index, CalculateEuclideanDistance(
-                trainingSet['data'][index], pointSearch)])
+            [index, trainingSet['labels'][index], CalculateEuclideanDistance(
+                pointSearch, trainingSet['data'][index])])
 
     # Sort the points by their distances.
-    distances.sort(key=itemgetter(1))
+    distances.sort(key=itemgetter(2))
 
-    result = []
-    for x in range(k):
-        result.append(distances[x])
-
-    return result
+    return distances[:k]
 
 
-def GetMostCommon(classifiedPoints):
+def GetMostCommon(labels):
     # Select the most common season within all classified points.
-    return Counter(classifiedPoints).most_common()[0][0]
+    return Counter(labels).most_common()[0][0]
 
 
 def main():
@@ -82,24 +78,24 @@ def main():
     dataset = ParseDataset("assignment_k_nearest\\dataset.csv", False)
     trainingSet = ParseDataset("assignment_k_nearest\\validation1.csv", True)
 
-    totalSuccess = 0
-    totalFail = 0
-
     # Check every k from 2 to 63
-    for k in range(2, 63):
+    for k in range(59, 75):
         # Iterate through the whole dataset.
+
+        totalSuccess = 0
+        totalFail = 0
+
         for index in range(len(dataset['data'])):
             neighbours = GetNeighbours(trainingSet, dataset['data'][index], k)
 
-            classifiedPoints = []
+            labels = [i[1] for i in neighbours]
 
-            # For each shortest distance, get the matching season out of the set.
-            for neighbour in neighbours:
-                classifiedPoints.append(trainingSet['labels'][neighbour[0]])
+            result = GetMostCommon(labels)
 
-            result = GetMostCommon(classifiedPoints)
+            # print("Expected: {} | Actual: {}".format(
+            #   dataset['labels'][index], result))
 
-            if result == dataset['labels'][index]:
+            if result is dataset['labels'][index]:
                 # We guessed it right, the season is correct.
                 totalSuccess += 1
             else:
@@ -107,6 +103,11 @@ def main():
                 totalFail += 1
 
         print("=============== K: {} ===============\n".format(k))
+
+        print("Total success: {} | Total fail: {}".format(totalSuccess, totalFail))
+
+        print(len(trainingSet['labels']))
+        print(len(trainingSet['data']))
 
         print("Error percentage: {}%".format(
             (100 * totalFail) / (totalSuccess + totalFail)))
