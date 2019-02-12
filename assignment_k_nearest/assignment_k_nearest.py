@@ -38,25 +38,30 @@ def CalculateEuclideanDistance(pointA, pointB):
     return sum
 
 def DetermineClosestIndices(k, distances):
-    closestIndices = []
+    array = []
+    closestIndices = [0]*k
+    
     currentIndex = 0
-    while currentIndex < k:
-        indexOfSmallest = distances.index(min(distances))
-        closestIndices.append(indexOfSmallest)
-        del(distances[indexOfSmallest])
-        currentIndex += 1
+    # while currentIndex < k:
+    #     indexOfSmallest = distances.index(min(distances))
+    #     closestIndices.append(indexOfSmallest)
+    #     del(distances[indexOfSmallest])
+    #     currentIndex += 1
+    # return closestIndices
+
+    for i in range(0, len(distances)):
+        array.append([])
+        array[i].append(distances[i])
+        array[i].append(i)
+
+    array.sort()
+
+    for i in range(0,k):
+        closestIndices[i] = array[i][1]
     return closestIndices
 
 def predictLabel(labels):    
     predictedLabel = max(set(labels), key=labels.count)
-
-    winters = labels.count("winter")
-    lentes = labels.count("lente")
-    zomers = labels.count("zomer")
-    herfsts = labels.count("herfst")
-
-    # print("Winters:",winters,", Lentes:",lentes, ", Zomers:",zomers, ", Herfsts:", herfsts)
-    
     return predictedLabel
 
 def main():
@@ -68,13 +73,8 @@ def main():
     newDates = ParseDatesFromDataset("assignment_k_nearest\\validation1.csv")
     newLabels = FormLabels(newDates)
 
-    # ksForDict = []
-    # correctForDict = []
-
     k = 1
     while k <= 100:
-
-        # ksForDict.append(k)
         currentPointIndex = 0
         correct = 0
         for newPoint in newData:
@@ -91,16 +91,11 @@ def main():
 
             if predictedLabel == realLabel:
                 correct += 1
-            # else:
-            #     print("Predicted:",predictedLabel,"||| Real:",realLabel)
 
             currentPointIndex += 1
-        # correctForDict.append(correct)
+
         print("K =", k, "- correct answers:", correct)
         k += 1
-
-    
-    # print(dict(zip(ksForDict,correctForDict)))
     
 
 # Parsing function
