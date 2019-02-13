@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib as mp
 import random
 
 # Calculate distance K-means
@@ -33,31 +34,54 @@ def CalculateEuclideanDistance(pointA, pointB):
     sum = 0
     for i in range(0, len(pointA)):
         sum += (pointA[i] - pointB[i])**2
-    sum = sum/len(pointA)
+    sum = sum**(1/len(pointA))
     return sum
 
-# def DetermineClosestIndices(k, distances):
-#     closestIndices = []
-#     currentIndex = 0
-#     while currentIndex < k:
-#         print(currentIndex)
-#         indexOfSmallest = distances.index(min(distances))
-#         closestIndices.append(indexOfSmallest)
-#         del(distances[indexOfSmallest])
-#         currentIndex += 1
-#     return closestIndices
+def PickKRandomPointsFromDataset(dataset, k):
+    kPoints = []
+    for i in range(0,k): #Make this prettier
+        kPoints.append(random.choice(dataset))
 
-# def predictLabel(labels):    
-#     predictedLabel = max(set(labels), key=labels.count)
+    return kPoints
 
-#     winters = labels.count("winter")
-#     lentes = labels.count("lente")
-#     zomers = labels.count("zomer")
-#     herfsts = labels.count("herfst")
+def CalculateCentroidsFromClusters(clusters):
+    centroids = []
+    for cluster in clusters:
+        # centroidMean = np.mean(cluster, axis = 0)
+        if len(cluster) != 0:
+            centroidMean = [0]*len(cluster[0])
+            for point in cluster:
+                centroidMean = np.add(centroidMean, point)
+            for dimension in range(0, len(centroidMean)):
+                centroidMean[dimension] = round(centroidMean[dimension] / len(cluster))
+            centroids.append(centroidMean)
+        else:
+            print("Empty cluster found, assigning new centroid")
+            randC = random.choice(clusters)
+            while randC == []:
+                randC = random.choice(clusters)
+                print("Empty cluster picked itself, retry")
+            randP = random.choice(randC)
+            centroids.append(randP)
+    return np.asarray(centroids)
 
-    # print("Winters:",winters,", Lentes:",lentes, ", Zomers:",zomers, ", Herfsts:", herfsts)
+def DetermineLabels(cluster, dataset, labels):
+    labelsInCluster = []
     
-    return predictedLabel
+    
+    for point in cluster:
+        labelFound = False
+        indexOfPointInDataset = 0
+        for data in dataset:
+            if labelFound == False:
+                if all(point == data):
+                    labelsInCluster.append(labels[indexOfPointInDataset])
+                    labelFound = True
+            indexOfPointInDataset += 1
+
+
+    return labelsInCluster
+
 
 def main():
     originalData = ParseValuesFromDataset("assignment_k_means\\dataset.csv")
@@ -68,39 +92,67 @@ def main():
     newDates = ParseDatesFromDataset("assignment_k_means\\validation1.csv")
     newLabels = FormLabels(newDates)
 
-    # ksForDict = []
-    # correctForDict = []
-
-    # k = 1
-    # while k <= 100:
-
-    #     # ksForDict.append(k)
-    #     currentPointIndex = 0
-    #     correct = 0
-    #     for newPoint in newData:
-    #         labels = []
-    #         distances = []
-    #         for oldPoint in originalData:
-    #             distances.append(CalculateEuclideanDistance(newPoint, oldPoint))
-    #         closestIndices = DetermineClosestIndices(k, distances)
-    #         for index in closestIndices:
-    #             labels.append(originalLabels[index])
-    #         predictedLabel = predictLabel(labels)
-    #         realLabel = newLabels[currentPointIndex]
+    attemptsPerK = 3
+    k = 4
+    kMax = len(originalData) / 4
+    
+    while k <= kMax:
+        totalCorrectness = 0.0
+        for attempts in range(0,attemptsPerK):
+            # Pick K random points from dataset as centroids
+            centroids = PickKRandomPointsFromDataset(originalData, k)
+            clusters = []
             
 
-    #         if predictedLabel == realLabel:
-    #             correct += 1
-    #         # else:
-    #         #     print("Predicted:",predictedLabel,"||| Real:",realLabel)
+            for clusterCount in range(0,len(centroids)):
+                clusters.append([])
 
-    #         currentPointIndex += 1
-    #     # correctForDict.append(correct)
-    #     print("K =", k, "- correct answers:", correct)
-    #     k += 1
+            # print(clusters)
+            # While centroids change
+            recalculationCount = 0
 
-    
-    # print(dict(zip(ksForDict,correctForDict)))
+            centroidsHaveChanged = True
+            while centroidsHaveChanged:
+                # print(centroids)
+                # For each point in dataset, 
+                for point in originalData:
+                    # assign closest centroid
+                    distances = []
+
+                    for centroidIndex in range(0,len(centroids)):
+                    # for centroid in centroids
+                        distances.append(CalculateEuclideanDistance(point, centroids[centroidIndex]))                 
+                    closestCluster = distances.index(min(distances))
+                    # Add point to cluster list
+                    clusters[closestCluster].append(point)
+
+                # Recalculate centroid
+                newCentroids = CalculateCentroidsFromClusters(clusters)
+                if np.array_equal(centroids, newCentroids):
+                    centroidsHaveChanged = False
+                    # print("Not Changed, done with k", k)
+                else:
+                    recalculationCount += 1
+                    centroids = newCentroids
+                    # print("Changed:", recalculationCount)
+                    
+                    # print("changed")
+                
+                
+
+            # For Each cluster, 
+            for cluster in clusters:
+                labelsInCluster = DetermineLabels(cluster, originalData, originalLabels)
+                mostOccuringLabel = max(set(labelsInCluster), key=labelsInCluster.count)
+                
+                totalCorrectness += (labelsInCluster.count(mostOccuringLabel)/len(labelsInCluster))*100
+        
+            print("K:", k, "Recalculations:", recalculationCount)
+        print("Total Correctness:", totalCorrectness/(k*attemptsPerK))
+        k += 1
+    # Plot stored values to Scree Plot
+        
+         
     
 
 # Parsing function
