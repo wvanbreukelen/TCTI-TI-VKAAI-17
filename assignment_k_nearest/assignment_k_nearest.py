@@ -1,6 +1,4 @@
 import numpy as np
-import random
-import time
 
 # Calculate distance K-means
 
@@ -34,20 +32,12 @@ def CalculateEuclideanDistance(pointA, pointB):
     sum = 0
     for i in range(0, len(pointA)):
         sum += (pointA[i] - pointB[i])**2
-    sum = sum/len(pointA)
+    sum = sum**(1/len(pointA))
     return sum
 
 def DetermineClosestIndices(k, distances):
     array = []
     closestIndices = [0]*k
-    
-    currentIndex = 0
-    # while currentIndex < k:
-    #     indexOfSmallest = distances.index(min(distances))
-    #     closestIndices.append(indexOfSmallest)
-    #     del(distances[indexOfSmallest])
-    #     currentIndex += 1
-    # return closestIndices
 
     for i in range(0, len(distances)):
         array.append([])
