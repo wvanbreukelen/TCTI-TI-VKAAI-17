@@ -4,18 +4,19 @@ import math
 from collections import Counter
 from operator import itemgetter
 
-# Calculate distance K-nearest, by Wiebe van Breukelen.
+# Calculate distance K-nearest, by Wiebe van Breukelen and Kevin Nijmeijer.
 
 
-def ParseDataset(file):
+def ParseDataset(file, parseLabels=True):
     """ Parse all data points within a given .csv dataset.
 
     Arguments:
         file {string} -- File path.
+        parseLabels {bool} -- Parse labels in the first column (used for validation).
 
     Returns:
         nparray -- Numpy array containing all data points.
-        nparray -- Numpy array containing all labels.
+        nparray -- Only when parseLabels is true; numpy array containing all labels.
     """
 
     data = np.genfromtxt(file, delimiter=";", usecols=[1, 2, 3, 4, 5, 6, 7], converters={
@@ -23,10 +24,13 @@ def ParseDataset(file):
         7: lambda s: 0 if s == b"-1" else float(s)
     })
 
-    labels = np.genfromtxt(
-        file, delimiter=";", usecols=[0])
+    if parseLabels:
+        labels = np.genfromtxt(
+            file, delimiter=";", usecols=[0])
 
-    return data, labels
+        return data, labels
+
+    return data
 
 
 def DateToSeason(date):
@@ -118,12 +122,18 @@ def MostCommonInList(list):
 
 def main():
     # Parse both datasets.
-    dataset, datasetLabels = ParseDataset(
+    validationDataset, validationLabels = ParseDataset(
         "assignment_k_nearest\\validation1.csv")
-    trainingSet, trainingSetLabels = ParseDataset(
+    dataset, datasetLabels = ParseDataset(
         "assignment_k_nearest\\dataset.csv")
 
-    maxK = 63
+    # Parse a dataset containing days without labels, validation cannot be performed.
+    datasetRandomDays = ParseDataset("assignment_k_nearest\\days.csv", False)
+
+    # maxK is used to select the maximum K range to search for optimalK, the K with the best classification results.
+    maxK = 65
+    optimalK = 0
+    bestRate = 0
 
     # Check every k from 2 to maxK
     for k in range(2, maxK):
@@ -131,23 +141,35 @@ def main():
 
         totalSuccess = 0
 
-        for index in range(len(dataset)):
-            # print(entry)
+        for index in range(len(validationDataset)):
             neighbours = GetNeighbours(
-                trainingSet, trainingSetLabels, dataset[index], k)
-
-            # print(neighbours)
+                dataset, datasetLabels, validationDataset[index], k)
 
             labels = [i[1] for i in neighbours]
 
             result = MostCommonInList(labels)
-            # result = get_most_common_label(neighbours)
-            if result == DateToSeason(datasetLabels[index]):
+            if result == DateToSeason(validationLabels[index]):
                 totalSuccess += 1
 
-        print("=============== K: {} ===============\n".format(k))
-        print("Success percentage: {}%\n".format(
-            (100 * totalSuccess) / len(dataset)))
+        successRate = (100 * totalSuccess) / len(validationDataset)
+
+        if successRate > bestRate:
+            bestRate = successRate
+            optimalK = k
+
+        print("K = {} -> Success rate: {}%".format(k, successRate))
+
+    print("K = {} has the best success rate: {}%".format(optimalK, bestRate))
+
+    for index in range(len(datasetRandomDays)):
+        neighbours = GetNeighbours(
+            dataset, datasetLabels, datasetRandomDays[index], optimalK)
+
+        labels = [i[1] for i in neighbours]
+
+        result = MostCommonInList(labels)
+
+        print("Item {} = {}".format(index + 1, result))
 
 
 # Invoke the main function.
