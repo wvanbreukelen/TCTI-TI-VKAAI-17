@@ -4,7 +4,7 @@ import math
 from collections import Counter
 from operator import itemgetter
 
-# Calculate distance K-nearest, by Wiebe van Breukelen and Kevin Nijmeijer.
+# Unsupervised K-nearest classifier, by Wiebe van Breukelen and Kevin Nijmeijer.
 
 
 def ParseDataset(file, parseLabels=True):
@@ -16,7 +16,7 @@ def ParseDataset(file, parseLabels=True):
 
     Returns:
         nparray -- Numpy array containing all data points.
-        nparray -- Only when parseLabels is true; numpy array containing all labels.
+        nparray -- Only returned when parseLabels is true; numpy array containing all labels.
     """
 
     data = np.genfromtxt(file, delimiter=";", usecols=[1, 2, 3, 4, 5, 6, 7], converters={
@@ -58,7 +58,7 @@ def DateToSeason(date):
 
 
 def CalculateEuclideanDistance(pointA, pointB):
-    """ Calculate the enclidean distance between two multidimensional points.
+    """ Calculate the Enclidean distance between two multidimensional points.
 
     Note that the amount of dimensions of both points are required to be the same.
 
@@ -66,13 +66,16 @@ def CalculateEuclideanDistance(pointA, pointB):
         pointA {nparray} -- First point.
         pointB {nparray} -- Second point.
 
+    Raises:
+        ValueError -- Exception is raised when an inconsistant number of dimensions is used.
+
     Returns:
         float -- The calculated euclidean distance.
     """
 
     # Check if we are dealing with the same number of dimensions.
     if len(pointA) != len(pointB):
-        return None
+        raise ValueError("Inconsistant number of dimensions.")
     sum = 0
     for i in range(len(pointA)):
         sum += math.pow(pointA[i] - pointB[i], 2)
@@ -135,16 +138,18 @@ def main():
     optimalK = 0
     bestRate = 0
 
+    print("======  VALIDATION DATASET =======\n")
+
     # Check every k from 2 to maxK
     for k in range(2, maxK):
-        # Iterate through the whole dataset.
-
         totalSuccess = 0
 
+        # Iterate through the whole dataset.
         for index in range(len(validationDataset)):
             neighbours = GetNeighbours(
                 dataset, datasetLabels, validationDataset[index], k)
 
+            # Extract the labels.
             labels = [i[1] for i in neighbours]
 
             result = MostCommonInList(labels)
@@ -153,18 +158,23 @@ def main():
 
         successRate = (100 * totalSuccess) / len(validationDataset)
 
+        # Check if this K has given us a better rate.
         if successRate > bestRate:
             bestRate = successRate
             optimalK = k
 
         print("K = {} -> Success rate: {}%".format(k, successRate))
 
-    print("K = {} has the best success rate: {}%".format(optimalK, bestRate))
+    print("\nK = {} has the best success rate: {}%".format(optimalK, bestRate))
+
+    # Classify days.csv
+    print("\n====== RANDOM DAYS DATASET (with K = {}) =======\n".format(optimalK))
 
     for index in range(len(datasetRandomDays)):
         neighbours = GetNeighbours(
             dataset, datasetLabels, datasetRandomDays[index], optimalK)
 
+        # Extract the labels.
         labels = [i[1] for i in neighbours]
 
         result = MostCommonInList(labels)
