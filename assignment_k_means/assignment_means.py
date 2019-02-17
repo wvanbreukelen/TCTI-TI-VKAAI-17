@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import math
+import matplotlib.pyplot as plt
 from collections import Counter
 from operator import itemgetter
 
@@ -59,87 +60,13 @@ def CalculateEuclideanDistance(pointA, pointB):
     return math.sqrt(sum)
 
 
-# def GenerateCentroids(trainingSet, k):
-#     size = len(trainingSet)
-#     centroids = []
-
-#     for i in range(k):
-#         centroids.append(trainingSet[random.randint(0, size - 1)])
-
-#     return centroids
-
 def GenerateClusters(trainingSet, k):
     size = len(trainingSet)
     return [Cluster(trainingSet[random.randint(0, size - 1)]) for i in range(k)]
 
 
-# def FindNearestToPoint(point, centroids):
-#     distance = CalculateEuclideanDistance(
-#         point, centroids[0][0])
-#     nearest = [0, point]
-
-#     for centroidIndex in range(1, len(centroids)):
-#         print(centroids)
-#         tempDistance = CalculateEuclideanDistance(
-#             point, centroids[centroidIndex][0])
-#         if tempDistance < distance:
-#             nearest[0] = centroidIndex
-#             nearest[1] = point
-#             distance = tempDistance
-
-#     return nearest
-
-def FindNearestToPoint(point, centroids):
-    distance = CalculateEuclideanDistance(
-        point, centroids[0])
-    nearest = [0, point]
-
-    for centroidIndex in range(1, len(centroids)):
-        tempDistance = CalculateEuclideanDistance(
-            point, centroids[centroidIndex])
-        if tempDistance < distance:
-            nearest[0] = centroidIndex
-            nearest[1] = point
-            distance = tempDistance
-
-    return nearest
-
-
 def GetDistanceToCluster(point, cluster):
     return CalculateEuclideanDistance(point, cluster.GetCentroid()[0])
-
-
-# def UpdateClusters(dataset, clusters, centroids):
-#     if len(clusters) == 0:
-#         return None
-
-#     # Clear all cluster points.
-#     for cluster in clusters:
-#         cluster["points"].clear()
-
-#     for point in dataset:
-#         nearest = FindNearestToPoint(
-#             point[0], centroids)
-
-#         for cluster in clusters:
-#             if cluster["centroid_index"] == nearest[0]:
-#                 # Append the new cluster point
-#                 cluster["points"].append(nearest[1])
-
-#     return clusters
-
-# def UpdateCluster(dataset, cluster, centroids):
-#     # Clear all cluster points.
-#     cluster["points"].clear()
-
-#     for point in dataset:
-#         nearest = FindNearestToPoint(
-#             point[0], centroids)
-
-#         if nearest[0] == cluster["centroid_index"]:
-#             cluster["points"].append(nearest[1])
-
-#     return cluster
 
 
 def UpdateClusters(dataset, clusters):
@@ -164,13 +91,6 @@ def UpdateCentroids(clusters):
             return False
 
     return True
-
-
-def AnalyseClusters(clusters):
-    for cluster in clusters:
-        for point in cluster["points"]:
-            # print(point)
-            pass
 
 
 class Cluster:
@@ -212,45 +132,94 @@ class Cluster:
         return labels
 
 
+def CalculateIntraDistance(cluster):
+    sum = 0.0
+
+    for point in cluster.GetPoints():
+        sum += CalculateEuclideanDistance(
+            point[0], cluster.GetCentroid()[0])
+
+    return sum / len(cluster.GetPoints())
+
+
 def main():
     # Parse both datasets.
     dataset, datasetLabels = ParseDataset(
-        "assignment_k_nearest\\dataset.csv")
+        "assignment_k_means\\dataset.csv")
 
     dataset = list(zip(dataset, datasetLabels))
 
-    k = 4
+    intraDistances = []
 
-    clusters = GenerateClusters(dataset, k)
+    maxK = 10
+    rangeK = range(1, maxK)
 
-    isChanging = True
+    for k in rangeK:
+        clusters = GenerateClusters(dataset, k)
 
-    while isChanging:
-        oldClusters = clusters
-        newClusters = UpdateClusters(dataset, clusters)
+        isChanging = True
 
-        if not UpdateCentroids(clusters):
-            print("Generating new clusters...", flush=True)
-            clusters = GenerateClusters(dataset, k)
-            continue
+        while isChanging:
+            oldClusters = clusters
+            newClusters = UpdateClusters(dataset, clusters)
 
-        for oldCluster in oldClusters:
-            for newCluster in newClusters:
-                if np.array_equiv(oldCluster.GetCentroid(), newCluster.GetCentroid()):
-                    isChanging = False
-                else:
-                    isChanging = True
+            if UpdateCentroids(clusters):
+                for oldCluster in oldClusters:
+                    for newCluster in newClusters:
+                        if np.array_equiv(oldCluster.GetCentroid(), newCluster.GetCentroid()):
+                            isChanging = False
+                        else:
+                            isChanging = True
 
-        if isChanging:
-            clusters = newClusters
+                if isChanging:
+                    clusters = newClusters
+            else:
+                # We've got empty clusters, recalculate...
+                clusters = GenerateClusters(dataset, k)
 
-    for cluster in clusters:
-        spread = sorted(cluster.GetSpread().items(),
-                        key=itemgetter(1), reverse=True)
+        intraDistanceSum = 0.0
 
-        if len(spread):
-            print("Spread: {}".format(spread))
-            print("Cluster label is {}".format(spread[0][0]))
+        for cluster in clusters:
+            spread = sorted(cluster.GetSpread().items(),
+                            key=itemgetter(1), reverse=True)
+
+            intraDistanceSum += CalculateIntraDistance(cluster)
+
+            # print("Spread: {}".format(spread))
+            # print("Cluster label is {}".format(spread[0][0]))
+            # print("Intra distance: {}".format(CalculateIntraDistance(cluster)))
+
+        intraDistances.append(intraDistanceSum / len(clusters))
+
+        print("K = {} -> Intra-distance = {}".format(k,
+                                                     intraDistanceSum / len(clusters)))
+
+    largestDerivative = 0.0
+    optimalK = 0
+
+    for index in range(k - 3):
+        derivative = np.diff(intraDistances[index:index + 3], n=2)
+
+        if derivative > largestDerivative:
+            largestDerivative = derivative
+        else:
+            optimalK = index + 3
+            break
+
+    print("Optimal K: {}".format(optimalK))
+
+    plt.subplot(2, 1, 1)
+    plt.plot(np.array(rangeK), intraDistances)
+    plt.title('Scree plot')
+
+    plt.xlabel('k')
+    plt.ylabel('Intra-distance')
+
+    plt.subplot(2, 1, 2)
+    plt.title('Second derivative')
+    plt.plot(np.diff(intraDistances, n=2))
+
+    plt.show()
 
 
 # Invoke the main function.
