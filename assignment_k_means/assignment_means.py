@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import math
+import copy
 import matplotlib.pyplot as plt
 from collections import Counter
 from operator import itemgetter
@@ -70,6 +71,8 @@ def GetDistanceToCluster(point, cluster):
 
 
 def UpdateClusters(dataset, clusters):
+    [cluster.ResetPoints() for cluster in clusters]
+
     for point in dataset:
         distanceToClusters = []
 
@@ -80,6 +83,8 @@ def UpdateClusters(dataset, clusters):
         closestCluster = min(distanceToClusters, key=lambda x: x[0])
 
         closestCluster[1].AddPoint(point)
+
+    # clusters = UpdateCentroids(clusters)
 
     return clusters
 
@@ -103,6 +108,9 @@ class Cluster:
 
     def GetPoints(self):
         return self.points
+
+    def ResetPoints(self):
+        self.points.clear()
 
     def RecalculateCentroid(self):
         if not self.GetSize():
@@ -137,9 +145,9 @@ def CalculateIntraDistance(cluster):
 
     for point in cluster.GetPoints():
         sum += CalculateEuclideanDistance(
-            point[0], cluster.GetCentroid()[0])
+            point[0], cluster.GetCentroid()[0])**2
 
-    return sum / len(cluster.GetPoints())
+    return sum  # / len(cluster.GetPoints())
 
 
 def main():
@@ -161,18 +169,21 @@ def main():
 
         while isChanging:
             oldClusters = clusters
-            newClusters = UpdateClusters(dataset, clusters)
+            newClusters = copy.deepcopy(UpdateClusters(dataset, oldClusters))
 
-            if UpdateCentroids(clusters):
-                for oldCluster in oldClusters:
-                    for newCluster in newClusters:
-                        if np.array_equiv(oldCluster.GetCentroid(), newCluster.GetCentroid()):
-                            isChanging = False
-                        else:
-                            isChanging = True
+            if UpdateCentroids(newClusters):
+                flags = []
 
-                if isChanging:
-                    clusters = newClusters
+                for index in range(len(oldClusters)):
+                    if np.array_equiv(np.array(np.around(oldClusters[index].GetCentroid()[0], 1)), np.array(np.around(newClusters[index].GetCentroid()[0], 1))):
+                        flags.append(False)
+                    else:
+                        flags.append(True)
+
+                if True in flags:
+                    clusters = copy.deepcopy(newClusters)
+                else:
+                    isChanging = False
             else:
                 # We've got empty clusters, recalculate...
                 clusters = GenerateClusters(dataset, k)
@@ -180,8 +191,8 @@ def main():
         intraDistanceSum = 0.0
 
         for cluster in clusters:
-            spread = sorted(cluster.GetSpread().items(),
-                            key=itemgetter(1), reverse=True)
+            # spread = sorted(cluster.GetSpread().items(),
+            #                 key=itemgetter(1), reverse=True)
 
             intraDistanceSum += CalculateIntraDistance(cluster)
 
@@ -189,10 +200,10 @@ def main():
             # print("Cluster label is {}".format(spread[0][0]))
             # print("Intra distance: {}".format(CalculateIntraDistance(cluster)))
 
-        intraDistances.append(intraDistanceSum / len(clusters))
+        intraDistances.append(intraDistanceSum)
 
         print("K = {} -> Intra-distance = {}".format(k,
-                                                     intraDistanceSum / len(clusters)))
+                                                     intraDistanceSum))
 
     largestDerivative = 0.0
     optimalK = 0
