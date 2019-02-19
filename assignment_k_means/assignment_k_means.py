@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib as mp
+import matplotlib.pyplot as plt
 import random
 
 # Calculate distance K-means
@@ -53,7 +53,8 @@ def CalculateCentroidsFromClusters(clusters):
             for point in cluster:
                 centroidMean = np.add(centroidMean, point)
             for dimension in range(0, len(centroidMean)):
-                centroidMean[dimension] = round(centroidMean[dimension] / len(cluster))
+                centroidMean[dimension] = round(centroidMean[dimension] / len(cluster), 1)
+                # centroidMean[dimension] = centroidMean[dimension] / len(cluster)
             centroids.append(centroidMean)
         else:
             print("Empty cluster found, assigning new centroid")
@@ -82,22 +83,37 @@ def DetermineLabels(cluster, dataset, labels):
 
     return labelsInCluster
 
+def CalculateIntraDistance(cluster, centroid):
+    intradistance = 0.0
+
+    for point in cluster:
+        intradistance += CalculateEuclideanDistance(point, centroid)**2
+        
+
+    return intradistance
+
 
 def main():
     originalData = ParseValuesFromDataset("assignment_k_means\\dataset.csv")
     originalDates = ParseDatesFromDataset("assignment_k_means\\dataset.csv")
-    originalLabels = FormLabels(originalDates)
+    # originalLabels = FormLabels(originalDates)
 
-    newData = ParseValuesFromDataset("assignment_k_means\\validation1.csv")
-    newDates = ParseDatesFromDataset("assignment_k_means\\validation1.csv")
-    newLabels = FormLabels(newDates)
+    # newData = ParseValuesFromDataset("assignment_k_means\\validation1.csv")
+    # newDates = ParseDatesFromDataset("assignment_k_means\\validation1.csv")
+    # newLabels = FormLabels(newDates)
 
-    attemptsPerK = 3
-    k = 4
-    kMax = len(originalData) / 4
+    attemptsPerK = 1
+    k = 1
+    kMax = 10
     
+    kAxis = []
+    vAxis = []
+
     while k <= kMax:
-        totalCorrectness = 0.0
+        # kAxis.append(k)
+        # vAxis.append(0)
+
+        # totalCorrectness = 0.0
         for attempts in range(0,attemptsPerK):
             # Pick K random points from dataset as centroids
             centroids = PickKRandomPointsFromDataset(originalData, k)
@@ -128,7 +144,7 @@ def main():
 
                 # Recalculate centroid
                 newCentroids = CalculateCentroidsFromClusters(clusters)
-                if np.array_equal(centroids, newCentroids):
+                if np.array_equiv(centroids, newCentroids):
                     centroidsHaveChanged = False
                     # print("Not Changed, done with k", k)
                 else:
@@ -141,17 +157,31 @@ def main():
                 
 
             # For Each cluster, 
-            for cluster in clusters:
-                labelsInCluster = DetermineLabels(cluster, originalData, originalLabels)
-                mostOccuringLabel = max(set(labelsInCluster), key=labelsInCluster.count)
+            V = 0.0
+            for clusterindex in range(0,len(clusters)):
+                V  += CalculateIntraDistance(clusters[clusterindex], centroids[clusterindex])
                 
-                totalCorrectness += (labelsInCluster.count(mostOccuringLabel)/len(labelsInCluster))*100
+                # labelsInCluster = DetermineLabels(cluster, originalData, originalLabels)
+                # mostOccuringLabel = max(set(labelsInCluster), key=labelsInCluster.count)
+                
+                # totalCorrectness += (labelsInCluster.count(mostOccuringLabel)/len(labelsInCluster))*100
         
             print("K:", k, "Recalculations:", recalculationCount)
-        print("Total Correctness:", totalCorrectness/(k*attemptsPerK))
-        k += 1
-    # Plot stored values to Scree Plot
+            print("Intradistance :", V)
+            kAxis.append(k)
+            vAxis.append(V)
+        # print("Total Correctness:", totalCorrectness/(k*attemptsPerK))
         
+        
+        k += 1
+    # Determine second derivative of calculated values
+    
+    print(vAxis)
+    print(kAxis)
+
+    plt.plot(kAxis, vAxis)
+    plt.show()
+    # plt.ylabel
          
     
 
