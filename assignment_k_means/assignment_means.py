@@ -34,6 +34,15 @@ def ParseDataset(file, parseLabels=True):
 
 
 def DateToSeason(date):
+    """Parse date to assign season label
+    
+    Arguments:
+        date {[integer]} -- the date is assigned to a point in the data
+    
+    Returns:
+        String -- The corresponding season string
+    """
+
     dateWithoutYear = date % 10000
 
     if dateWithoutYear < 301:
@@ -49,6 +58,19 @@ def DateToSeason(date):
 
 
 def CalculateEuclideanDistance(pointA, pointB):
+    """This function calculates the euclidean distance between two points of both n-length in dimensions
+    
+    Arguments:
+        pointA {numpyArray} -- This is the source point that is used in the calculation
+        pointB {numpyArray} -- This is the target point that is used in the calculation
+    
+    Raises:
+        ValueError -- This error is thrown when the number of dimensions between pointA and pointB differ
+    
+    Returns:
+        Float -- the calculated euclidean distance
+    """
+
     # Check if we are dealing with the same number of dimensions.
     if len(pointA) != len(pointB):
         raise ValueError(
@@ -62,15 +84,45 @@ def CalculateEuclideanDistance(pointA, pointB):
 
 
 def GenerateClusters(trainingSet, k):
+    """This function is used to start a clusterset of k clusters using the data in the trainingSet
+    
+    Arguments:
+        trainingSet {npArray} -- The dataset that is used for the generation
+        k {integer} -- the target amount of clusters to be created
+    
+    Returns:
+        Array -- An array of k empty clusters with a random point from the dataset as its centroid
+    """
+
     size = len(trainingSet)
     return [Cluster(trainingSet[random.randint(0, size - 1)]) for i in range(k)]
 
 
 def GetDistanceToCluster(point, cluster):
+    """This function is used to calculate the distance between a point and the centroid of a given cluster
+    
+    Arguments:
+        point {numpyArray} -- The point to be used in the distance calculation
+        cluster {Cluster} -- the cluster that contains the to be used centroid
+    
+    Returns:
+        float -- The euclidean distance between the point and the centroid of the cluster
+    """
+
     return CalculateEuclideanDistance(point, cluster.GetCentroid()[0])
 
 
 def UpdateClusters(dataset, clusters):
+    """This function checks all points in the dataset and ads the point to the cluster with the closest centroid
+    
+    Arguments:
+        dataset {numpyArray} -- The set that contains all points to be assigned to a cluster
+        clusters {Cluster[]} -- A list of clusters that get the points from the dataset assigned to
+    
+    Returns:
+        Cluster[] -- A new list of clusters containing altered points within said clusters
+    """
+
     [cluster.ResetPoints() for cluster in clusters]
 
     for point in dataset:
@@ -90,6 +142,15 @@ def UpdateClusters(dataset, clusters):
 
 
 def UpdateCentroids(clusters):
+    """A helper function to recalculate all centroids within the list of clusters
+    
+    Arguments:
+        clusters {Cluster[]} -- The list of clusters that need a recalculation of the centroids
+    
+    Returns:
+        Boolean -- if the recalculation of clusters is succesful it returns True, if there's a problem it returns False
+    """
+
     # Calculate the new centroids
     for cluster in clusters:
         if not cluster.RecalculateCentroid():
@@ -99,6 +160,7 @@ def UpdateCentroids(clusters):
 
 
 class Cluster:
+
     def __init__(self, centroid, points=[]):
         self.centroid = centroid
         self.points = []
@@ -141,6 +203,15 @@ class Cluster:
 
 
 def CalculateIntraDistance(cluster):
+    """This function calculates the squared Intra-Distance of a given cluster
+    
+    Arguments:
+        cluster {Cluster} -- the cluster of points and the centroid to calculate the intraDistance
+    
+    Returns:
+        float -- the sum of the squared euclidean distance between each point in the cluster and the clusters centroid
+    """
+
     sum = 0.0
 
     for point in cluster.GetPoints():
