@@ -245,6 +245,28 @@ def CalculateIntraDistance(cluster):
     return sum
 
 
+def calculateSecondDerivative(xValue, xAxisValues, yAxisValues):
+
+    dataIndex = xAxisValues.index(xValue)
+
+    firstVal = yAxisValues[dataIndex]
+    secondVal = yAxisValues[dataIndex + 1]
+    thirdVal = yAxisValues[dataIndex + 2]
+
+    diffA = secondVal-firstVal
+    diffB = thirdVal-secondVal
+
+    diffC = diffB-diffA
+
+    return diffC
+
+
+def main():
+    # Parse both datasets.
+    dataset, datasetLabels = ParseDataset(
+        "assignment_k_means\\dataset.csv")
+
+
 def PerformKMeans(iterations, dataset, k):
     kAccumDistances = 0.0
 
