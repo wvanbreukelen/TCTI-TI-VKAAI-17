@@ -218,7 +218,7 @@ def CalculateIntraDistance(cluster):
         sum += CalculateEuclideanDistance(
             point[0], cluster.GetCentroid()[0])**2
 
-    return sum  # / len(cluster.GetPoints())
+    return sum 
 
 def calculateSecondDerivative(xValue, xAxisValues, yAxisValues):
 
@@ -245,10 +245,12 @@ def main():
 
     intraDistances = []
 
-    maxK = 10
+    maxK = 16
     rangeK = range(1, maxK)
+    usedKs = []
 
     for k in rangeK:
+        usedKs.append(k)
         clusters = GenerateClusters(dataset, k)
 
         isChanging = True
@@ -277,31 +279,33 @@ def main():
         intraDistanceSum = 0.0
 
         for cluster in clusters:
-            # spread = sorted(cluster.GetSpread().items(),
-            #                 key=itemgetter(1), reverse=True)
 
             intraDistanceSum += CalculateIntraDistance(cluster)
-
-            # print("Spread: {}".format(spread))
-            # print("Cluster label is {}".format(spread[0][0]))
-            # print("Intra distance: {}".format(CalculateIntraDistance(cluster)))
 
         intraDistances.append(intraDistanceSum)
 
         print("K = {} -> Intra-distance = {}".format(k,
                                                      intraDistanceSum))
 
-    largestDerivative = 0.0
+
     optimalK = 0
+    lowestFound = False
+    
+    derivatives = []
 
-    for index in range(k - 3):
-        derivative = np.diff(intraDistances[index:index + 3], n=2)
+    for eachK in range(1, len(usedKs) - 1):
+        derivative = calculateSecondDerivative(eachK, usedKs, intraDistances)
+        derivatives.append(derivative)
 
-        if derivative > largestDerivative:
-            largestDerivative = derivative
-        else:
-            optimalK = index + 3
-            break
+        if derivative < 0:
+            if lowestFound == False:
+                lowestFound = True
+                optimalK = eachK
+        
+
+    print(usedKs)
+    print(derivatives)
+
 
     print("Optimal K: {}".format(optimalK))
 
@@ -314,7 +318,8 @@ def main():
 
     plt.subplot(2, 1, 2)
     plt.title('Second derivative')
-    plt.plot(np.diff(intraDistances, n=2))
+    print(derivatives)
+    plt.plot(range(1, maxK-2), derivatives)
 
     plt.show()
 
