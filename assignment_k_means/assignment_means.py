@@ -34,11 +34,11 @@ def ParseDataset(file, parseLabels=True):
 
 
 def DateToSeason(date):
-    """Parse date to assign season label
-    
+    """ Parse date to assign season label
+
     Arguments:
-        date {[integer]} -- the date is assigned to a point in the data
-    
+        date {integer} -- the date is assigned to a point in the data
+
     Returns:
         String -- The corresponding season string
     """
@@ -58,15 +58,15 @@ def DateToSeason(date):
 
 
 def CalculateEuclideanDistance(pointA, pointB):
-    """This function calculates the euclidean distance between two points of both n-length in dimensions
-    
+    """ This function calculates the euclidean distance between two points of both n-length in dimensions
+
     Arguments:
         pointA {numpyArray} -- This is the source point that is used in the calculation
         pointB {numpyArray} -- This is the target point that is used in the calculation
-    
+
     Raises:
         ValueError -- This error is thrown when the number of dimensions between pointA and pointB differ
-    
+
     Returns:
         Float -- the calculated euclidean distance
     """
@@ -84,27 +84,26 @@ def CalculateEuclideanDistance(pointA, pointB):
 
 
 def GenerateClusters(trainingSet, k):
-    """This function is used to start a clusterset of k clusters using the data in the trainingSet
-    
+    """ This function is used to start a clusterset of k clusters using the data in the trainingSet
+
     Arguments:
         trainingSet {npArray} -- The dataset that is used for the generation
         k {integer} -- the target amount of clusters to be created
-    
+
     Returns:
         Array -- An array of k empty clusters with a random point from the dataset as its centroid
     """
 
-    size = len(trainingSet)
-    return [Cluster(trainingSet[random.randint(0, size - 1)]) for i in range(k)]
+    return [Cluster(trainingSet[random.randint(0, len(trainingSet) - 1)]) for i in range(k)]
 
 
 def GetDistanceToCluster(point, cluster):
-    """This function is used to calculate the distance between a point and the centroid of a given cluster
-    
+    """ This function is used to calculate the distance between a point and the centroid of a given cluster
+
     Arguments:
         point {numpyArray} -- The point to be used in the distance calculation
         cluster {Cluster} -- the cluster that contains the to be used centroid
-    
+
     Returns:
         float -- The euclidean distance between the point and the centroid of the cluster
     """
@@ -113,14 +112,14 @@ def GetDistanceToCluster(point, cluster):
 
 
 def UpdateClusters(dataset, clusters):
-    """This function checks all points in the dataset and ads the point to the cluster with the closest centroid
-    
+    """ This function checks all points in the dataset and ads the point to the cluster with the closest centroid
+
     Arguments:
         dataset {numpyArray} -- The set that contains all points to be assigned to a cluster
-        clusters {Cluster[]} -- A list of clusters that get the points from the dataset assigned to
-    
+        clusters {Cluster} -- A list of clusters that get the points from the dataset assigned to
+
     Returns:
-        Cluster[] -- A new list of clusters containing altered points within said clusters
+        list [Cluster] -- A new list of clusters containing altered points within said clusters
     """
 
     [cluster.ResetPoints() for cluster in clusters]
@@ -142,11 +141,11 @@ def UpdateClusters(dataset, clusters):
 
 
 def UpdateCentroids(clusters):
-    """A helper function to recalculate all centroids within the list of clusters
-    
+    """ A helper function to recalculate all centroids within the list of clusters
+
     Arguments:
-        clusters {Cluster[]} -- The list of clusters that need a recalculation of the centroids
-    
+        clusters {Cluster} -- The list of clusters that need a recalculation of the centroids
+
     Returns:
         Boolean -- if the recalculation of clusters is succesful it returns True, if there's a problem it returns False
     """
@@ -159,14 +158,39 @@ def UpdateCentroids(clusters):
     return True
 
 
+""" Abstract Data Type for a cluster.
+
+A cluster is build out of cluster points. These cluster points determines the cluster centroid, the mean of all cluster points. 
+"""
+
+
 class Cluster:
+
+    """ Constructs a cluster object.
+
+    Arguments:
+        centroid {np.array} -- Cluster start centroid, most likely random selected out of the dataset.
+        points {[np.array]} -- Optional: points in the cluster.
+    """
 
     def __init__(self, centroid, points=[]):
         self.centroid = centroid
         self.points = []
 
+    """ Add a point to the cluster.
+    
+    Argument:
+        point {np.array} -- Point to add.
+    """
+
     def AddPoint(self, point):
         self.points.append(point)
+
+    """ Get all points within the cluster.
+    
+    Returns:
+        {[np.array]} -- Points within cluster.
+    """
 
     def GetPoints(self):
         return self.points
@@ -204,10 +228,10 @@ class Cluster:
 
 def CalculateIntraDistance(cluster):
     """This function calculates the squared Intra-Distance of a given cluster
-    
+
     Arguments:
         cluster {Cluster} -- the cluster of points and the centroid to calculate the intraDistance
-    
+
     Returns:
         float -- the sum of the squared euclidean distance between each point in the cluster and the clusters centroid
     """
@@ -218,29 +242,21 @@ def CalculateIntraDistance(cluster):
         sum += CalculateEuclideanDistance(
             point[0], cluster.GetCentroid()[0])**2
 
-    return sum  # / len(cluster.GetPoints())
+    return sum
 
 
-def main():
-    # Parse both datasets.
-    dataset, datasetLabels = ParseDataset(
-        "assignment_k_means\\dataset.csv")
+def PerformKMeans(iterations, dataset, k):
+    kAccumDistances = 0.0
 
-    dataset = list(zip(dataset, datasetLabels))
-
-    intraDistances = []
-
-    maxK = 10
-    rangeK = range(1, maxK)
-
-    for k in rangeK:
+    for z in range(iterations):
         clusters = GenerateClusters(dataset, k)
 
         isChanging = True
 
         while isChanging:
             oldClusters = clusters
-            newClusters = copy.deepcopy(UpdateClusters(dataset, oldClusters))
+            newClusters = copy.deepcopy(
+                UpdateClusters(dataset, oldClusters))
 
             if UpdateCentroids(newClusters):
                 flags = []
@@ -270,11 +286,31 @@ def main():
             # print("Spread: {}".format(spread))
             # print("Cluster label is {}".format(spread[0][0]))
             # print("Intra distance: {}".format(CalculateIntraDistance(cluster)))
+        kAccumDistances += intraDistanceSum
 
-        intraDistances.append(intraDistanceSum)
+    #intraDistances.append(intraDistanceSum / iterations)
+
+    return kAccumDistances / iterations
+
+
+def main():
+    # Parse both datasets.
+    dataset, datasetLabels = ParseDataset(
+        "assignment_k_means\\dataset.csv")
+
+    dataset = list(zip(dataset, datasetLabels))
+
+    intraDistances = []
+
+    maxK = 10
+    rangeK = range(1, maxK)
+    iterations = 5
+
+    for k in rangeK:
+        intraDistances.append(PerformKMeans(iterations, dataset, k))
 
         print("K = {} -> Intra-distance = {}".format(k,
-                                                     intraDistanceSum))
+                                                     intraDistances[-1]))
 
     largestDerivative = 0.0
     optimalK = 0
@@ -299,7 +335,8 @@ def main():
 
     plt.subplot(2, 1, 2)
     plt.title('Second derivative')
-    plt.plot(np.diff(intraDistances, n=2))
+    plt.xlabel('k')
+    plt.plot(range(3, maxK), np.diff(intraDistances, n=2))
 
     plt.show()
 
