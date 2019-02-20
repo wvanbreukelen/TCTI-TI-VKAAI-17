@@ -221,6 +221,17 @@ def CalculateIntraDistance(cluster):
     return sum 
 
 def calculateSecondDerivative(xValue, xAxisValues, yAxisValues):
+    """ This function calculates the second derivative of the point xValue in the dataset of yAxisValues
+    
+    Arguments:
+        xValue {integer} -- The value on the xAxis whereof the second derivative needs to be calculated
+        xAxisValues {list} -- List from first k to maximum k
+        yAxisValues {list} -- List of values corresponding to the calculated intradistance per K
+    
+    Returns:
+        float -- the second differential on point xValue
+    """
+
 
     dataIndex = xAxisValues.index(xValue)
 
@@ -245,51 +256,55 @@ def main():
 
     intraDistances = []
 
-    maxK = 16
+    maxK = 10
     rangeK = range(1, maxK)
-    usedKs = []
+    usedKs = list(range(1, maxK))
+    
+    iterations = 10
 
     for k in rangeK:
-        usedKs.append(k)
-        clusters = GenerateClusters(dataset, k)
+        intraDistances.append(0.0)
+        for run in range(0, iterations):
+            print("Iteration", run + 1, "for k =", k)
+            clusters = GenerateClusters(dataset, k)
 
-        isChanging = True
+            isChanging = True
 
-        while isChanging:
-            oldClusters = clusters
-            newClusters = copy.deepcopy(UpdateClusters(dataset, oldClusters))
+            while isChanging:
+                oldClusters = clusters
+                newClusters = copy.deepcopy(UpdateClusters(dataset, oldClusters))
 
-            if UpdateCentroids(newClusters):
-                flags = []
+                if UpdateCentroids(newClusters):
+                    flags = []
 
-                for index in range(len(oldClusters)):
-                    if np.array_equiv(np.array(np.around(oldClusters[index].GetCentroid()[0], 1)), np.array(np.around(newClusters[index].GetCentroid()[0], 1))):
-                        flags.append(False)
+                    for index in range(len(oldClusters)):
+                        if np.array_equiv(np.array(np.around(oldClusters[index].GetCentroid()[0], 1)), np.array(np.around(newClusters[index].GetCentroid()[0], 1))):
+                            flags.append(False)
+                        else:
+                            flags.append(True)
+
+                    if True in flags:
+                        clusters = copy.deepcopy(newClusters)
                     else:
-                        flags.append(True)
-
-                if True in flags:
-                    clusters = copy.deepcopy(newClusters)
+                        isChanging = False
                 else:
-                    isChanging = False
-            else:
-                # We've got empty clusters, recalculate...
-                clusters = GenerateClusters(dataset, k)
+                    # We've got empty clusters, recalculate...
+                    clusters = GenerateClusters(dataset, k)
 
-        intraDistanceSum = 0.0
+            intraDistanceSum = 0.0
 
-        for cluster in clusters:
+            for cluster in clusters:
 
-            intraDistanceSum += CalculateIntraDistance(cluster)
+                intraDistanceSum += CalculateIntraDistance(cluster)
 
-        intraDistances.append(intraDistanceSum)
+            intraDistances[k - 1] += intraDistanceSum 
 
-        print("K = {} -> Intra-distance = {}".format(k,
-                                                     intraDistanceSum))
-
+            print("K = {} -> Intra-distance = {}".format(k,
+                                                        intraDistanceSum))
+    intraDistances[k-1] = intraDistances[k-1]/iterations
 
     optimalK = 0
-    lowestFound = False
+    optimumFound = False
     
     derivatives = []
 
@@ -297,15 +312,17 @@ def main():
         derivative = calculateSecondDerivative(eachK, usedKs, intraDistances)
         derivatives.append(derivative)
 
+        #Find the first < 0 
         if derivative < 0:
-            if lowestFound == False:
-                lowestFound = True
+            if optimumFound == False:
+                optimumFound = True
                 optimalK = eachK
-        
 
-    print(usedKs)
-    print(derivatives)
-
+        #Find the dip 
+        if derivative > derivatives[eachK-2]:
+            if optimumFound == False:
+                optimumFound = True
+                optimalK = eachK-1
 
     print("Optimal K: {}".format(optimalK))
 
@@ -318,11 +335,10 @@ def main():
 
     plt.subplot(2, 1, 2)
     plt.title('Second derivative')
-    print(derivatives)
+    # print(derivatives)
     plt.plot(range(1, maxK-2), derivatives)
 
     plt.show()
-
 
 # Invoke the main function.
 if __name__ == "__main__":
