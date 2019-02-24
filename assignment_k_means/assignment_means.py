@@ -266,7 +266,7 @@ def CalculateIntraDistance(cluster):
     return sum
 
 
-def calculateSecondDerivative(xValue, xAxisValues, yAxisValues):
+def CalculateSecondDerivative(xValue, xAxisValues, yAxisValues):
     """ This function calculates the second derivative of the point xValue in the dataset of yAxisValues
 
     Arguments:
@@ -367,7 +367,7 @@ def main():
     derivatives = []
 
     for eachK in range(1, len(usedKs) - 1):
-        derivative = calculateSecondDerivative(eachK, usedKs, intraDistances)
+        derivative = CalculateSecondDerivative(eachK, usedKs, intraDistances)
         derivatives.append(derivative)
 
         # Find the first < 0.
