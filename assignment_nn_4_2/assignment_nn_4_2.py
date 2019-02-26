@@ -1,5 +1,5 @@
 class Bias:
-    self __init__(self, value, weight):
+    def __init__(self, value, weight):
         pass
 
 
@@ -12,10 +12,10 @@ class Neuron:
     def CalculateOutput(self, input):
         sum = 0.0
 
-        for weight in weights:
-            sum += input * weight
+        # for weight in weights:
+        #     sum += input * weight
 
-        sum += bias
+        # sum += bias
 
         # Sum is a value not between 0.0 and 1.0
 
@@ -27,7 +27,7 @@ class NeuronLayer:
         self.neurons = [Neuron(bias)
                         for i in range(neuronAmount)]
 
-        for i in range(neuronAmount):
+        # for i in range(neuronAmount):
 
 
 class NeuralNetwork:
@@ -36,9 +36,9 @@ class NeuralNetwork:
         self.hiddenLayer = NeuronLayer(neuronsInHiddenLayer, bias)
         self.outputLayer = NeuronLayer(neuronsInOutputLayer, bias)
 
-    def initializeHiddenWeights():
-        # Initialize the we-> hidden layer neurons.
-        pass
+    # def initializeHiddenWeights():
+    #     # Initialize the we-> hidden layer neurons.
+    #     pass
 
 
 def main():
