@@ -8,12 +8,12 @@ class Neuron:
         self.inputs = []
         self.isInputNeuron = (defaultOutput is not None)
         self.output = defaultOutput
+        self.error = None
 
     def SetInputWeights(self, weights):
         self.weights = weights
 
     def AddInputWeight(self, weight):
-        print("Adding weight {} to neuron...".format(weight))
         self.weights.append(weight)
 
     def CalculateOutput(self, inputs):
@@ -29,9 +29,8 @@ class Neuron:
         self.output = math.tanh(self.output)
 
     def __str__(self):
-        return "Weights: {}\n Inputs: {}\nOutputs: {}\nIs preset: {}\n".format(
-            self.weights, self.inputs, self.output, self.isInputNeuron)
-
+        return "Input weights: {}\nInput values: {}\nOutput: {}\nIs preset: {}\nError: {}\n".format(
+            self.weights, self.inputs, self.output, self.isInputNeuron, self.error)
 
 class NeuronLayer:
     def __init__(self, neuronAmount, defaultOutputs=[]):
@@ -41,6 +40,14 @@ class NeuronLayer:
         else:
             self.neurons = [Neuron()
                             for i in range(neuronAmount)]
+
+    def SetInputs(self, inputs):
+        # if len(inputs) != len(self.neurons):
+        #     raise Exception("Amount of inputs does not match with the amount of neurons!")
+
+        for i in range(len(inputs)):
+            self.neurons[i].output = inputs[i]
+            self.neurons[i].isInputNeuron = True
 
     def GetOutput(self):
         result = []
@@ -58,7 +65,6 @@ class NeuronLayer:
         for neuron in self.neurons:
             if not neuron.isInputNeuron:
                 return False
-
         return True
 
     def __repr__(self):
@@ -69,10 +75,11 @@ class NeuronLayer:
 
         return str()
 
-
 class NeuralNetwork:
-    def __init__(self, inputs, neuronsInHiddenLayer, neuronsInOutputLayer, bias, hiddenLayerWeights=[], outputLayerWeights=[]):
+    def __init__(self,learnRate, inputs, neuronsInHiddenLayer, neuronsInOutputLayer, bias, hiddenLayerWeights=[], outputLayerWeights=[]):
         # self.inputs = inputs
+        self.learnRate = learnRate
+
         self.inputLayer = NeuronLayer(len(inputs[0]), inputs[0])
 
         # Add the bias neuron
@@ -94,8 +101,44 @@ class NeuralNetwork:
         self.hiddenLayer.SetOutput(self.inputLayer.GetOutput())
         self.outputLayer.SetOutput(self.hiddenLayer.GetOutput())
 
-    def Backpropagate(self):
-        pass
+    def CalculateErrors(self, realOutput: list):
+        #outputLayer
+        # Calculate errors for output layer
+        for index in range(len(self.outputLayer.neurons)):
+            currentNeuron = self.outputLayer.neurons[index]
+            currentNeuron.error = (1-(math.tanh(currentNeuron.output)))*(realOutput[index]-currentNeuron.output)
+
+        # hiddenLayer
+        # Calculate errors for hidden layer
+        for index in range(len(self.hiddenLayer.neurons)):
+            sumOfErrors = 0.0
+            currentNeuron = self.hiddenLayer.neurons[index]
+
+            for outIndex in range(len(self.outputLayer.neurons)):
+                currentOutputNeuron = self.outputLayer.neurons[outIndex]
+                sumOfErrors += (1 - (math.tanh(currentNeuron.output)))*currentOutputNeuron.weights[index]*currentOutputNeuron.error #TODO Check of dit goed gaat
+
+                currentOutputNeuron.weights[index] += self.learnRate*currentNeuron.output*currentOutputNeuron.error
+
+            currentNeuron.error = sumOfErrors
+
+            for currentInputIndex in range(len(self.inputLayer.neurons)):
+                if not currentNeuron.isInputNeuron:
+                    currentNeuron.weights[currentInputIndex] += self.learnRate*self.inputLayer.neurons[currentInputIndex].output*currentNeuron.error
+
+        # Set new weights between input and hidden
+    def Train(self, trainingSet, expectedOutputs, iterations):
+        for it in range(iterations):
+            for dataIndex in range(len(trainingSet)):
+                self.inputLayer.SetInputs(trainingSet[dataIndex])
+                self.FeedForward()
+                self.BackPropagate(expectedOutputs[dataIndex])
+                
+                if it + 1 == iterations:
+                    print("Inputs: {}, Expected Output: {}, Output: {}".format(trainingSet[dataIndex], expectedOutputs[dataIndex], self.outputLayer.neurons[0].output))
+
+    def BackPropagate(self, targetOutputs):
+        self.CalculateErrors(targetOutputs)
 
     def InitializeWeightsBetweenLayers(self, layerOne, layerTwo, hiddenLayerWeights=[]):
         weightIndex = 0
@@ -124,25 +167,18 @@ class NeuralNetwork:
 
         return str()
 
-
 def main():
-    print("Hello World!")
 
-    nn = NeuralNetwork([[1, 1], [0, 1], [1, 0], [1, 1]],
-                       2, 1, -1)
+    inputValues =  [[0, 0], [0, 1], [1, 0], [1, 1]]
+    learnRate = 0.1
+    hiddenNeurons = 2
+    outputs = 1
+    bias = -1
+    expectedOutputs = [[0],[1],[1],[0]]
+    nn = NeuralNetwork(learnRate,inputValues,
+                       hiddenNeurons, outputs, bias)
 
-    # nn = NeuralNetwork([[0, 1], [0, 1], [1, 0], [1, 1]],
-    #                    2, 1, 1, [1.0, 1.0, 0.0, -1.0, -1.0, 0.0], [1.0, 1.0, 0.0])
-
-    print(nn)
-
-    nn.FeedForward()
-
-    print(nn)
-
-    # nn = NeuralNetwork([[0, 0], [0, 1], [1, 0], [1, 1]],
-    #                   2, 1, -1)
-
+    nn.Train(inputValues, expectedOutputs, 1000)
 
 # Invoke the main function.
 if __name__ == "__main__":
