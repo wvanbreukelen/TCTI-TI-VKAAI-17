@@ -122,7 +122,7 @@ class NeuralNetwork:
                 currentOutputNeuron = self.outputLayer.neurons[outIndex]
                 sumOfErrors += (1 - (math.tanh(currentNeuron.output))) * \
                     currentOutputNeuron.weights[index] * \
-                    currentOutputNeuron.error  # TODO Check of dit goed gaat
+                    currentOutputNeuron.error
 
                 currentOutputNeuron.weights[index] += self.learnRate * \
                     currentNeuron.output*currentOutputNeuron.error
@@ -143,9 +143,9 @@ class NeuralNetwork:
                 self.FeedForward()
                 self.BackPropagate(expectedOutputs[dataIndex])
 
-                if it + 1 == iterations:
-                    print("Inputs: {}, Expected Output: {}, Output: {}".format(
-                        trainingSet[dataIndex], expectedOutputs[dataIndex], self.outputLayer.neurons[0].output))
+                # if it + 1 == iterations:
+                #     print("Inputs: {}, Expected Output: {}, Output: {} | {} | {}".format(
+                #         trainingSet[dataIndex], expectedOutputs[dataIndex], self.outputLayer.neurons[0].output,self.outputLayer.neurons[1].output,self.outputLayer.neurons[2].output))
 
     def BackPropagate(self, targetOutputs):
         self.CalculateErrors(targetOutputs)
@@ -164,6 +164,16 @@ class NeuralNetwork:
                         layerTwoNeuron.AddInputWeight(random.uniform(0, 1))
 
                     weightIndex += 1
+
+    def ProcessPoint(self, input):
+        self.inputLayer.SetInputs(input)
+        self.FeedForward()
+
+        outputs = []
+        for out in self.outputLayer.neurons:
+            outputs.append(out.output)
+
+        return outputs
 
     def __repr__(self):
         print("INPUT LAYER")
@@ -201,27 +211,49 @@ def ParseIrisDataset(file, parseLabels=True):
 
     return data
 
+def ConvertLabelsToExpectedOutputs(labels):
+    expectedOutputs = []
+    
+    for label in labels:
+        if label == "Iris-setosa":
+            expectedOutputs.append([1.0,0.0,0.0])
+        elif label == "Iris-versicolor":
+            expectedOutputs.append([0.0,1.0,0.0])
+        elif label == "Iris-virginica":
+            expectedOutputs.append([0.0,0.0,1.0])
+        else:
+            raise Exception("Unknown label in dataset please don't.")
+
+    return expectedOutputs
+
 
 def main():
 
-    dataset, labels = ParseIrisDataset("assignment_nn_4_2/irisDataset.csv")
-
-    print(dataset)
-    print(labels)
-
-   # inputValues = [[0, 0], [0, 1], [1, 0], [1, 1]]
-    #inputValues = dataset
-    # print(inputValues)
     learnRate = 0.1
-    hiddenNeurons = 10
+    hiddenNeurons = 30
     outputs = 3
     bias = -1
-    expectedOutputs = [[0], [1], [1], [0]]
+    testsetSize = 15
+
+    dataset, labels = ParseIrisDataset("assignment_nn_4_2/irisDataset.csv")
+
+    zippedInput = list(zip(dataset,labels))
+    random.shuffle(zippedInput)
+    testDataset, testLabels = zip(*zippedInput[::testsetSize])
+    del zippedInput[:testsetSize]
+    dataset, labels = zip(*zippedInput)
+    expectedOutputs = ConvertLabelsToExpectedOutputs(labels)
+
     nn = NeuralNetwork(learnRate, dataset,
                        hiddenNeurons, outputs, bias)
 
-    nn.Train(dataset, labels, 1000)
+    nn.Train(dataset, expectedOutputs, 100)
 
+    for testIndex in range(len(testDataset)):
+        testResult = nn.ProcessPoint(testDataset[testIndex])
+        print("Iris Setosa:\t\t{}\nIris Versicolor:\t{}\nIris Virginica:\t\t{}".format(testResult[0], testResult[1], testResult[2]))
+        print("Actual label:\t\t{}".format(testLabels[testIndex]))
+        print('\n')
 
 # Invoke the main function.
 if __name__ == "__main__":
