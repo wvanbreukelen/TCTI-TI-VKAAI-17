@@ -1,5 +1,6 @@
 import math
 import random
+import numpy as np
 
 
 class Neuron:
@@ -31,6 +32,7 @@ class Neuron:
     def __str__(self):
         return "Input weights: {}\nInput values: {}\nOutput: {}\nIs preset: {}\nError: {}\n".format(
             self.weights, self.inputs, self.output, self.isInputNeuron, self.error)
+
 
 class NeuronLayer:
     def __init__(self, neuronAmount, defaultOutputs=[]):
@@ -75,8 +77,9 @@ class NeuronLayer:
 
         return str()
 
+
 class NeuralNetwork:
-    def __init__(self,learnRate, inputs, neuronsInHiddenLayer, neuronsInOutputLayer, bias, hiddenLayerWeights=[], outputLayerWeights=[]):
+    def __init__(self, learnRate, inputs, neuronsInHiddenLayer, neuronsInOutputLayer, bias, hiddenLayerWeights=[], outputLayerWeights=[]):
         # self.inputs = inputs
         self.learnRate = learnRate
 
@@ -102,11 +105,12 @@ class NeuralNetwork:
         self.outputLayer.SetOutput(self.hiddenLayer.GetOutput())
 
     def CalculateErrors(self, realOutput: list):
-        #outputLayer
+        # outputLayer
         # Calculate errors for output layer
         for index in range(len(self.outputLayer.neurons)):
             currentNeuron = self.outputLayer.neurons[index]
-            currentNeuron.error = (1-(math.tanh(currentNeuron.output)))*(realOutput[index]-currentNeuron.output)
+            currentNeuron.error = (
+                1-(math.tanh(currentNeuron.output)))*(realOutput[index]-currentNeuron.output)
 
         # hiddenLayer
         # Calculate errors for hidden layer
@@ -116,15 +120,20 @@ class NeuralNetwork:
 
             for outIndex in range(len(self.outputLayer.neurons)):
                 currentOutputNeuron = self.outputLayer.neurons[outIndex]
-                sumOfErrors += (1 - (math.tanh(currentNeuron.output)))*currentOutputNeuron.weights[index]*currentOutputNeuron.error #TODO Check of dit goed gaat
+                sumOfErrors += (1 - (math.tanh(currentNeuron.output))) * \
+                    currentOutputNeuron.weights[index] * \
+                    currentOutputNeuron.error  # TODO Check of dit goed gaat
 
-                currentOutputNeuron.weights[index] += self.learnRate*currentNeuron.output*currentOutputNeuron.error
+                currentOutputNeuron.weights[index] += self.learnRate * \
+                    currentNeuron.output*currentOutputNeuron.error
 
             currentNeuron.error = sumOfErrors
 
             for currentInputIndex in range(len(self.inputLayer.neurons)):
                 if not currentNeuron.isInputNeuron:
-                    currentNeuron.weights[currentInputIndex] += self.learnRate*self.inputLayer.neurons[currentInputIndex].output*currentNeuron.error
+                    currentNeuron.weights[currentInputIndex] += self.learnRate * \
+                        self.inputLayer.neurons[currentInputIndex].output * \
+                        currentNeuron.error
 
         # Set new weights between input and hidden
     def Train(self, trainingSet, expectedOutputs, iterations):
@@ -133,9 +142,10 @@ class NeuralNetwork:
                 self.inputLayer.SetInputs(trainingSet[dataIndex])
                 self.FeedForward()
                 self.BackPropagate(expectedOutputs[dataIndex])
-                
+
                 if it + 1 == iterations:
-                    print("Inputs: {}, Expected Output: {}, Output: {}".format(trainingSet[dataIndex], expectedOutputs[dataIndex], self.outputLayer.neurons[0].output))
+                    print("Inputs: {}, Expected Output: {}, Output: {}".format(
+                        trainingSet[dataIndex], expectedOutputs[dataIndex], self.outputLayer.neurons[0].output))
 
     def BackPropagate(self, targetOutputs):
         self.CalculateErrors(targetOutputs)
@@ -167,18 +177,51 @@ class NeuralNetwork:
 
         return str()
 
+
+def ParseIrisDataset(file, parseLabels=True):
+    """ Parse all data points within a given .csv dataset.
+
+    Arguments:
+        file {string} -- File path.
+        parseLabels {bool} -- Parse labels in the first column (used for validation).
+
+    Returns:
+        nparray -- Numpy array containing all data points.
+        nparray -- Only when parseLabels is true; numpy array containing all labels.
+    """
+
+    data = np.genfromtxt(file, delimiter=",", usecols=[
+                         0, 1, 2, 3], dtype=float)
+
+    if parseLabels:
+        labels = np.genfromtxt(
+            file, delimiter=",", usecols=[4], dtype=str)
+
+        return data, labels
+
+    return data
+
+
 def main():
 
-    inputValues =  [[0, 0], [0, 1], [1, 0], [1, 1]]
+    dataset, labels = ParseIrisDataset("assignment_nn_4_2/irisDataset.csv")
+
+    print(dataset)
+    print(labels)
+
+   # inputValues = [[0, 0], [0, 1], [1, 0], [1, 1]]
+    #inputValues = dataset
+    # print(inputValues)
     learnRate = 0.1
-    hiddenNeurons = 2
-    outputs = 1
+    hiddenNeurons = 10
+    outputs = 3
     bias = -1
-    expectedOutputs = [[0],[1],[1],[0]]
-    nn = NeuralNetwork(learnRate,inputValues,
+    expectedOutputs = [[0], [1], [1], [0]]
+    nn = NeuralNetwork(learnRate, dataset,
                        hiddenNeurons, outputs, bias)
 
-    nn.Train(inputValues, expectedOutputs, 1000)
+    nn.Train(dataset, labels, 1000)
+
 
 # Invoke the main function.
 if __name__ == "__main__":
