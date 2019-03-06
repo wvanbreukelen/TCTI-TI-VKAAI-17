@@ -204,13 +204,15 @@ class NeuralNetwork:
         Perform a feed forward operation upon the network.
 
         """
-
+        #Calculate the first hidden layer
         self.hiddenLayers[0].CalculateOutputs(self.inputLayer.GetOutput())
 
+        #Calculate other hidden layers
         for hiddenLayerIndex in range(1, len(self.hiddenLayers)):
             self.hiddenLayers[hiddenLayerIndex].CalculateOutputs(
                 self.hiddenLayers[hiddenLayerIndex - 1].GetOutput())
 
+        #Calculate output layer
         self.outputLayer.CalculateOutputs(
             self.hiddenLayers[len(self.hiddenLayers) - 1].GetOutput())
 
@@ -223,6 +225,7 @@ class NeuralNetwork:
             nextLayer {NeuronLayer} -- Next linked layer.
         """
 
+        #for every neuron in the current hidden layer
         for currentNeuronIndex in range(len(currentHiddenLayer.neurons)):
             sumOfErrors = 0.0
             currentNeuron = currentHiddenLayer.neurons[currentNeuronIndex]
@@ -230,14 +233,12 @@ class NeuralNetwork:
             for previousNeuronIndex in range(len(previousLayer.neurons)):
                 previousNeuron = previousLayer.neurons[previousNeuronIndex]
                 if not previousNeuron.isPresetNeuron:
-                    sumOfErrors += (1 - (math.tanh(currentNeuron.output))) * \
-                        previousNeuron.weights[currentNeuronIndex] * \
-                        previousNeuron.error
+                    sumOfErrors += previousNeuron.weights[currentNeuronIndex] * previousNeuron.error
 
                     previousNeuron.weights[currentNeuronIndex] += self.learnRate * \
                         currentNeuron.output * previousNeuron.error
 
-            currentNeuron.error = sumOfErrors
+            currentNeuron.error = (1-(math.tanh(currentNeuron.output))) * sumOfErrors
 
             for weightIndex in range(len(nextLayer.neurons)):
                 if not currentNeuron.isPresetNeuron:
@@ -399,8 +400,8 @@ def ConvertLabelsToExpectedOutputs(labels: list):
 def main():
 
     learnRate = 0.1
-    iterations = 100
-    hiddenNeurons = [15, 15]
+    iterations = 1000
+    hiddenNeurons = [5, 3]
 
     outputs = 3
     bias = -1
