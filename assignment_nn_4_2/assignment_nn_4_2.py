@@ -1,6 +1,7 @@
 import math
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Neuron:
@@ -239,12 +240,13 @@ class NeuralNetwork:
                         currentNeuron.output * previousNeuron.error
 
             currentNeuron.error = (1-(math.tanh(currentNeuron.output))) * sumOfErrors
-
-            for weightIndex in range(len(nextLayer.neurons)):
-                if not currentNeuron.isPresetNeuron:
-                    currentNeuron.weights[weightIndex] += self.learnRate * \
-                        nextLayer.neurons[weightIndex].output * \
-                        currentNeuron.error
+            
+            if nextLayer.isPresetLayer():
+                for weightIndex in range(len(nextLayer.neurons)):
+                    if not currentNeuron.isPresetNeuron:
+                        currentNeuron.weights[weightIndex] += self.learnRate * \
+                            nextLayer.neurons[weightIndex].output * \
+                            currentNeuron.error
 
     def BackPropagate(self, realOutput: list):
         """ Perform backpropagation upon the network based on the desired/perfect output.
@@ -258,8 +260,7 @@ class NeuralNetwork:
             currentNeuron = self.outputLayer.neurons[index]
 
             # For each output neuron, we calculate the error by performing the logistic function over the difference in expected output.
-            currentNeuron.error = (
-                1 - (math.tanh(currentNeuron.output)))*(realOutput[index] - currentNeuron.output)
+            currentNeuron.error = ( 1 - (math.tanh(currentNeuron.output)))*(realOutput[index] - currentNeuron.output)
 
         # Calculate errors for the hidden layers and the input layer.
         for hiddenLayerIndex in range(len(self.hiddenLayers) - 1, -1, -1):
@@ -289,13 +290,21 @@ class NeuralNetwork:
             expectedOutputs {list} -- Desired outputs of the network.
             iterations {int} -- Amount of training iterations.
         """
+        errorHistogram = []
 
         for it in range(iterations):
             print("Iteration {}".format(it))
+            errorsum = 0.0
             for dataIndex in range(len(trainingSet)):
                 self.inputLayer.SetOutputs(trainingSet[dataIndex])
                 self.FeedForward()
                 self.BackPropagate(expectedOutputs[dataIndex])
+            for outputNeuron in self.outputLayer.neurons:
+                errorsum += outputNeuron.error
+            errorHistogram.append(errorsum)
+
+
+        return errorHistogram
 
     def InitializeWeightsBetweenLayers(self, layerOne: NeuronLayer, layerTwo: NeuronLayer):
         """ Initialize weights between two network layers.
@@ -396,39 +405,90 @@ def ConvertLabelsToExpectedOutputs(labels: list):
 
     return expectedOutputs
 
+def IsCorrect(testResult, expectedResult):
+    iTest = testResult.index(max(testResult))
+    iExpected = expectedResult.index(max(expectedResult))
+
+    if iTest == iExpected:
+        return True
+    else:
+        return False
+
 
 def main():
 
     learnRate = 0.1
-    iterations = 1000
-    hiddenNeurons = [5, 3]
+    iterations = 250
+    hiddenNeurons = [8]
 
     outputs = 3
     bias = -1
-    testsetSize = 15
+    validationSetSize = 15
 
     dataset, labels = ParseIrisDataset("assignment_nn_4_2/irisDataset.csv")
 
     zippedInput = list(zip(dataset, labels))
+
+    arrayIndex = 0
+    
+    splitInput = [[]]
+
+    for index in range(0, len(zippedInput)):
+        if index != len(zippedInput) -1:
+            splitInput[arrayIndex].append(zippedInput[index])
+            if zippedInput[index][1] != zippedInput[index + 1][1]:
+                
+                splitInput.append([])
+                arrayIndex += 1
+        else:
+            splitInput[arrayIndex].append(zippedInput[index])
+        
+    validationData = []
+    validationLabels = []
+
+    dataset = []
+    labels = []
+
+    for irisType in splitInput:
+        random.shuffle(irisType)
+        valD, valL = zip(*irisType[:validationSetSize])
+        d, l = zip(*irisType[validationSetSize:])
+
+        validationData += valD
+        validationLabels += valL
+        dataset += d
+        labels += l
+
+    zippedInput = list(zip(dataset, labels))
     random.shuffle(zippedInput)
-    testDataset, testLabels = zip(*zippedInput[::testsetSize])
-    del zippedInput[:testsetSize]
+
     dataset, labels = zip(*zippedInput)
     expectedOutputs = ConvertLabelsToExpectedOutputs(labels)
 
     nn = NeuralNetwork(learnRate, dataset,
                        hiddenNeurons, outputs, bias)
 
-    nn.Train(dataset, expectedOutputs, iterations)
+    errorHistogram = nn.Train(dataset, expectedOutputs, iterations)
 
-    for testIndex in range(len(testDataset)):
-        testResult = nn.ProcessPoint(testDataset[testIndex])
+
+    expectedValidationOutput = ConvertLabelsToExpectedOutputs(validationLabels)
+
+    
+    for testIndex in range(len(validationData)):
+        print(validationData[testIndex])
+        testResult = nn.ProcessPoint(validationData[testIndex])
         print("Iris Setosa:\t\t{}\nIris Versicolor:\t{}\nIris Virginica:\t\t{}".format(
             testResult[0], testResult[1], testResult[2]))
-        print("Actual label:\t\t{}".format(testLabels[testIndex]))
+        print("Actual label:\t\t{}".format(validationLabels[testIndex]))
+        print("Correct: \t\t{}".format(IsCorrect(testResult, expectedValidationOutput[testIndex])))
         print('\n')
-
+    
+    testResult = nn.ProcessPoint([10,10,10,10])
+    print("Iris Setosa:\t\t{}\nIris Versicolor:\t{}\nIris Virginica:\t\t{}".format(testResult[0], testResult[1], testResult[2]))
+    plt.plot(np.array(range(iterations)), errorHistogram)
+    plt.show()
 
 # Invoke the main function.
 if __name__ == "__main__":
     main()
+
