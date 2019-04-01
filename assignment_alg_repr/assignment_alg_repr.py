@@ -30,7 +30,9 @@ We've tested various type of layers, dropouts and activation functions as shown 
 
 We can conclude that the use of the Sigmoid activation in combination with one hidden layer and a dropout of gives the best accuracy.
 However, one may consider using a single layer network for better performance and slightly worse accuracy. Note that in all tests softmax is used
-as activation function for the output layer.
+as activation function for the output layer. Note that this implementation will most likely not be the most optimal solution to the problem 
+(if this would even be possible), since we used a limited amount of test variable combinations. (Amt. of layers, different activation functions etc.) 
+to test this solution. 
 
 Note: RMSprop is used for optimalisation and resulted in a time decrease higher than 90%.
 
