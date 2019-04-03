@@ -66,13 +66,13 @@ class EvolutionaryAlgorithm:
             child[mutationIndex] = newGeneValue
             child[swapIndex] = oldGeneValue
         else:
-            # pass
+            pass
             # Chromosome does not contain a mutating gene anymore, so throw an exception.
-            raise ValueError("Invalid chromosome: {}".format(chromosome))
+            #raise ValueError("Invalid chromosome: {}".format(chromosome))
 
         return child
 
-    def generateNewGeneration(self, retainPercentage, mutationChance, randomSelection):
+    def GenerateNewGeneration(self, retainPercentage, mutationChance, randomSelection):
         newPopulation = []
 
         # Sort our current population based on the fitness.
@@ -122,14 +122,14 @@ class EvolutionaryAlgorithm:
 
         return self.population
 
-    def getGenerationFitness(self):
+    def GetGenerationFitness(self):
         sum = 0
         for chromosome in self.CalculatePopulationFitness():
             sum += chromosome[0]
 
         return sum
 
-    def getBestOfPopulation(self):
+    def GetBestOfPopulation(self):
         return sorted(self.CalculatePopulationFitness())[0]
 
 
@@ -145,11 +145,11 @@ def main():
     for i in range(attempts):
         EA = EvolutionaryAlgorithm(populationSize)
         for j in range(generations):
-            EA.generateNewGeneration(
+            EA.GenerateNewGeneration(
                 retainPercentage, mutationChancePercentage, selectionChancePercentage)
         print("Attempt\t", i + 1, "\tTotal Fitness:\t",
-              EA.getGenerationFitness(), "\tafter\t", j+1, "\tgenerations")
-        bestOfPop = EA.getBestOfPopulation()
+              EA.GetGenerationFitness(), "\tafter\t", j+1, "\tgenerations")
+        bestOfPop = EA.GetBestOfPopulation()
         print("Best result:\t", bestOfPop[1],
               "\twith fitness:\t", bestOfPop[0], '\n')
 
