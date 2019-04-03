@@ -1,136 +1,158 @@
 import random
 from functools import reduce
 
+
 class EvolutionaryAlgorithm:
 
     population = []
 
-
     def __init__(self, populationSize):
-        self.population = [self.createChromosome() for i in range(populationSize)]
+        self.population = [self.CreateChromosome()
+                           for i in range(populationSize)]
 
-    def createChromosome(self):
-        cards = [1,2,3,4,5,6,7,8,9,10] #single chromosome containing all starting values of cards
+    def CreateChromosome(self):
+        cards = list(range(1, 11))
         random.shuffle(cards)
         return cards
 
-    def splitChromosome(self, chromosome):
+    def SplitChromosome(self, chromosome):
         halfsize = int(len(chromosome)/2)
-        
+
         pile_0 = chromosome[:halfsize]
         pile_1 = chromosome[halfsize:]
 
         return pile_0, pile_1
-    
-    def calculateFitness(self, chromosome):
-        pile_0, pile_1 = self.splitChromosome(chromosome)
 
-        sumPileZero = sum(pile_0)
-        sumPileOne = reduce(lambda x,y : x*y, pile_1)
+    def CalculateFitness(self, chromosome):
+        pileOne, pileTwo = self.SplitChromosome(chromosome)
 
-        return abs(36-sumPileZero)+abs(360-sumPileOne)
+        sumPileOne = sum(pileOne)
+        sumPileTwo = reduce(lambda x, y: x * y, pileTwo)
 
-    def calculatePopulationFitness(self):
-        return [(self.calculateFitness(chromosome), chromosome) for chromosome in self.population]
-    
-    def createChildChromosome(self, parentA, parentB, mutationChance):
+        return abs(36 - sumPileOne) + abs(360 - sumPileTwo)
 
-        child = self.crossover(parentA.copy(), parentB.copy())
+    def CalculatePopulationFitness(self):
+        return [(self.CalculateFitness(chromosome), chromosome) for chromosome in self.population]
 
-        if random.randint(0,100) <= mutationChance:
-            child = self.mutate(child)
+    def CreateChildChromosome(self, parentA, parentB, mutationChance):
+        child = self.Crossover(parentA.copy(), parentB.copy())
+
+        if random.random() > mutationChance:
+            child = self.Mutate(child)
 
         return child
-    
-    def crossover(self, parentA, parentB):
 
-        splitIndex = int(len(parentA)/2)
-        partA = parentA[:splitIndex]
-        partB = parentB[splitIndex:]
+    def Crossover(self, parentA, parentB):
+        sliceIndex = int(len(parentA) / 2)
 
-        return partA+partB
+        partA = parentA[:sliceIndex]
+        partB = parentB[sliceIndex:]
 
-    def mutate(self, chromosome):
+        return partA + partB
+
+    def Mutate(self, chromosome):
         child = chromosome
 
-        mutationIndex = random.randint(1, len(chromosome)-1)
+        mutationIndex = random.randint(0, len(chromosome)-1)
+        oldGeneValue = child[mutationIndex]
 
-        tempValue = child[mutationIndex]
-        newValue = random.randint(1,10)
-        while(newValue == tempValue):
-            newValue = random.randint(1,10)
+        # Calculate a new value for a gene within the chromosome. It may not be the same as the old gene value.
+        newGeneValue = random.randint(1, 10)
+        while(oldGeneValue == newGeneValue):
+            newGeneValue = random.randint(1, 10)
 
-        if newValue in child:
-            toSwapIndex = child.index(newValue)
-            child[mutationIndex] = newValue
-            child[toSwapIndex] = tempValue
+        if newGeneValue in child:
+            swapIndex = child.index(newGeneValue)
+            child[mutationIndex] = newGeneValue
+            child[swapIndex] = oldGeneValue
+        else:
+            # pass
+            # Chromosome does not contain a mutating gene anymore, so throw an exception.
+            raise ValueError("Invalid chromosome: {}".format(chromosome))
 
         return child
-        
 
-    def generateNewGeneration(self, retainPercentage, mutationChance):
+    def generateNewGeneration(self, retainPercentage, mutationChance, randomSelection):
         newPopulation = []
-        
-        sortedPopulation = sorted(self.calculatePopulationFitness()) 
-        retainIndex = int(len(sortedPopulation)/(100/retainPercentage))
+
+        # Sort our current population based on the fitness.
+        sortedPopulation = sorted(self.CalculatePopulationFitness())
+
+        # Calculate the amount of genes to retain based on the retain percentage.
+        amountToRetain = int(len(sortedPopulation) / (100 / retainPercentage))
 
         parents = []
-
-        for passedParentIndex in range(0,retainIndex):
-            parents.append(sortedPopulation[passedParentIndex][1])
-
-        childAmount = len(self.population)-retainIndex
         children = []
 
-        for child in range(childAmount):
+        # Add all parents to retain.
+        for parentIndex in range(amountToRetain):
+            if random.random() > randomSelection:
+                parents.append(sortedPopulation[parentIndex][1])
 
-            #Only accept valid children into the new generation
+        # In the case no parents where selected, we manually add some.
+        for parentIndex in range(random.randint(1, amountToRetain)):
+            parents.append(sortedPopulation[parentIndex][1])
 
+        # Amount of children within the new population.
+        amountOfChildren = len(self.population) - len(parents)
+
+        while len(children) < amountOfChildren:
+            # Only accept valid children into the new generation
             newChild = []
             childIsValid = False
+
             while not childIsValid:
-                newChild = self.createChildChromosome(random.sample(parents,1)[0], random.sample(parents,1)[0], mutationChance)
+                male = random.randint(0, len(parents) - 1)
+                female = random.randint(0, len(parents) - 1)
+
+                newChild = self.CreateChildChromosome(
+                    parents[female], parents[male], mutationChance)
 
                 errorFound = False
-                for value in range(1,11):
+                for value in range(1, 11):
                     if (newChild.count(value) > 1):
                         errorFound = True
-                
+
                 if not errorFound:
                     childIsValid = True
-            children.append(newChild)    
-           
 
-        newPopulation = parents+children
-        self.population = newPopulation
+            children.append(newChild)
+
+        self.population = parents + children
+
         return self.population
 
     def getGenerationFitness(self):
         sum = 0
-        for chromosome in self.calculatePopulationFitness():
+        for chromosome in self.CalculatePopulationFitness():
             sum += chromosome[0]
 
         return sum
 
     def getBestOfPopulation(self):
-        return sorted(self.calculatePopulationFitness())[0]
+        return sorted(self.CalculatePopulationFitness())[0]
 
 
 def main():
-    attempts = 100
+    attempts = 20
     generations = 100
-    populationSize = 50
-    bestPercentageOfPopulationToAge = 50
-    mutationChancePercentage = 10
+    # populationSize = 50
+    populationSize = 100
+    retainPercentage = 50
+    mutationChancePercentage = 0.1
+    selectionChancePercentage = 0.1
 
     for i in range(attempts):
         EA = EvolutionaryAlgorithm(populationSize)
         for j in range(generations):
-            EA.generateNewGeneration(bestPercentageOfPopulationToAge, mutationChancePercentage)
-        print("Attempt\t", i + 1,"\tTotal Fitness:\t", EA.getGenerationFitness(),"\tafter\t",j+1,"\tgenerations" )
+            EA.generateNewGeneration(
+                retainPercentage, mutationChancePercentage, selectionChancePercentage)
+        print("Attempt\t", i + 1, "\tTotal Fitness:\t",
+              EA.getGenerationFitness(), "\tafter\t", j+1, "\tgenerations")
         bestOfPop = EA.getBestOfPopulation()
-        print("Best result:\t", bestOfPop[1], "\twith fitness:\t", bestOfPop[0], '\n')
-        
+        print("Best result:\t", bestOfPop[1],
+              "\twith fitness:\t", bestOfPop[0], '\n')
+
 
 if __name__ == "__main__":
     main()
