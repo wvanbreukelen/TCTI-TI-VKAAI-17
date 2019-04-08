@@ -3,27 +3,54 @@ from functools import reduce
 
 
 class EvolutionaryAlgorithm:
-
-    population = []
-
     def __init__(self, populationSize):
-        self.population = [self.CreateChromosome()
+        """ Initialize a new instance of a Evolutionary Algorithm.
+
+        Arguments:
+            populationSize {int} -- Size of population.
+        """
+
+        self.population = [self.GenerateChromosome()
                            for i in range(populationSize)]
 
-    def CreateChromosome(self):
+    def GenerateChromosome(self):
+        """ Generate a new chromosome. The chromosome contains ten unique shuffled numbers between 0 and 10.
+
+        Returns:
+            list -- New chromosome.
+        """
+
         cards = list(range(1, 11))
         random.shuffle(cards)
         return cards
 
     def SplitChromosome(self, chromosome):
+        """ Split a chromosome in two.
+
+        Arguments:
+            chromosome {list} -- Chromosome representation.
+
+        Returns:
+            list, list -- Split representation within two lists.
+        """
+
         halfsize = int(len(chromosome)/2)
 
-        pile_0 = chromosome[:halfsize]
-        pile_1 = chromosome[halfsize:]
+        pileA = chromosome[:halfsize]
+        pileB = chromosome[halfsize:]
 
-        return pile_0, pile_1
+        return pileA, pileB
 
     def CalculateFitness(self, chromosome):
+        """ Calculate the fitness of one chromosome.
+
+        Arguments:
+            chromosome {list} -- Chromosome representation.
+
+        Returns:
+            int -- Fitness of chromosome.
+        """
+
         pileOne, pileTwo = self.SplitChromosome(chromosome)
 
         sumPileOne = sum(pileOne)
@@ -35,6 +62,17 @@ class EvolutionaryAlgorithm:
         return [(self.CalculateFitness(chromosome), chromosome) for chromosome in self.population]
 
     def CreateChildChromosome(self, parentA, parentB, mutationChance):
+        """ Create a new child chromosome based on two parents.
+
+        Arguments:
+            parentA {list} -- Parent chromosome A.
+            parentB {list} -- Parent chromosome B.
+            mutationChance {float} -- Chance of mutution. Must be between 0.0 and 1.0
+
+        Returns:
+            list -- New child chromosome.
+        """
+
         child = self.Crossover(parentA.copy(), parentB.copy())
 
         if random.random() > mutationChance:
@@ -43,6 +81,16 @@ class EvolutionaryAlgorithm:
         return child
 
     def Crossover(self, parentA, parentB):
+        """ Perform single-point crossover over two chromosomes. Slice point is the exact middle of the chromosome.
+
+        Arguments:
+            parentA {list} -- Chromosome one.
+            parentB {list} -- Chromesome two.
+
+        Returns:
+            list -- New generated chromosome.
+        """
+
         sliceIndex = int(len(parentA) / 2)
 
         partA = parentA[:sliceIndex]
@@ -51,6 +99,18 @@ class EvolutionaryAlgorithm:
         return partA + partB
 
     def Mutate(self, chromosome):
+        """ Mutate a chromosome.
+
+        Arguments:
+            chromosome {list} -- Chromosome representation.
+
+        Raises:
+            ValueError -- [description]
+
+        Returns:
+            list -- Mutated chromosome.
+        """
+
         child = chromosome
 
         mutationIndex = random.randint(0, len(chromosome)-1)
@@ -73,13 +133,28 @@ class EvolutionaryAlgorithm:
         return child
 
     def GenerateNewGeneration(self, retainPercentage, mutationChance, randomSelection):
+        """ Generate an new population.
+
+        Arguments:
+            retainPercentage {float} -- Percentage of indiviuals to retain in the new population. Input must be between 0% and 100%
+            mutationChance {float} -- Chance of mutation. Must be between 0.0 and 1.0
+            randomSelection {float} -- Chance that an indiviual is retained. Must be between 0.0 and 1.0
+
+        Returns:
+            list -- New population, also stored within self.population
+        """
+
         newPopulation = []
 
         # Sort our current population based on the fitness.
         sortedPopulation = sorted(self.CalculatePopulationFitness())
 
         # Calculate the amount of genes to retain based on the retain percentage.
-        amountToRetain = int(len(sortedPopulation) / (100 / retainPercentage))
+        if retainPercentage == 0:
+            amountToRetain = 0
+        else:
+            amountToRetain = int(len(sortedPopulation) /
+                                 (100 / retainPercentage))
 
         parents = []
         children = []
@@ -123,6 +198,12 @@ class EvolutionaryAlgorithm:
         return self.population
 
     def GetGenerationFitness(self):
+        """ Calculate the total fitness for the whole population.
+
+        Returns:
+            int -- The sum fitness.
+        """
+
         sum = 0
         for chromosome in self.CalculatePopulationFitness():
             sum += chromosome[0]
@@ -130,6 +211,12 @@ class EvolutionaryAlgorithm:
         return sum
 
     def GetBestOfPopulation(self):
+        """ Return the sorted representation of all indiviuals based on their fitness.
+
+        Returns:
+            list -- Sorted population
+        """
+
         return sorted(self.CalculatePopulationFitness())[0]
 
 
