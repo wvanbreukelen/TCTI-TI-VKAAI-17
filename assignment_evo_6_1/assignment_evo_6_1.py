@@ -2,16 +2,26 @@
 Evolutionary Algorithm (exercise 6.1: cards problem) implementation by Kevin Nijmeijer and Wiebe van Breukelen.
 
 We've chosen to implement this exercise using an multipoint swap crossover operator as we are dealing with an ordening problem.
-Mutation is performed by randomlity selecting genes within the chromosome. 
+Mutation is performed by randomlity selecting genes within the chromosome.
+
+As an bonus, Kevin also implemented the order-based crossover operator. In our tests, order-based crossover was faster but took more generations to
+get to a stable result.
+The swap crossover operator was slower per generation but took less generations to get to a stable result.
 """
 
 
 import random
 from functools import reduce
+from enum import Enum
+
+
+class CrossoverOperator(Enum):
+    SWAP = 0
+    ORDER = 1
 
 
 class EvolutionaryAlgorithm:
-    def __init__(self, populationSize):
+    def __init__(self, populationSize: int):
         """ Initialize a new instance of a Evolutionary Algorithm.
 
         Arguments:
@@ -32,7 +42,7 @@ class EvolutionaryAlgorithm:
         random.shuffle(cards)
         return cards
 
-    def SplitChromosome(self, chromosome):
+    def SplitChromosome(self, chromosome: list):
         """ Split a chromosome in two.
 
         Arguments:
@@ -49,7 +59,7 @@ class EvolutionaryAlgorithm:
 
         return pileA, pileB
 
-    def CalculateFitness(self, chromosome):
+    def CalculateFitness(self, chromosome: list):
         """ Calculate the fitness of one chromosome.
 
         Arguments:
@@ -75,7 +85,7 @@ class EvolutionaryAlgorithm:
 
         return ((self.CalculateFitness(chromosome), chromosome) for chromosome in self.population)
 
-    def CreateChildChromosomes(self, parentA, parentB, mutationRate):
+    def CreateChildChromosomes(self, parentA: list, parentB: list, mutationRate: float, crossoverOp=CrossoverOperator.SWAP):
         """ Create a new child chromosomes based on two parents.
 
         Arguments:
@@ -86,12 +96,12 @@ class EvolutionaryAlgorithm:
         Returns:
             list -- New child chromosome.
         """
-
-        #Multiple children using Swap Crossover
-        children = self.SwapCrossover(parentA.copy(), parentB.copy())
-
-        #Single Child using order 1 crossover
-        # children = self.OrderOneCrossover(parentA.copy(), parentB.copy())
+        if crossoverOp is CrossoverOperator.SWAP:
+            # Multiple children using Swap Crossover
+            children = self.SwapCrossover(parentA.copy(), parentB.copy())
+        elif crossoverOp is CrossoverOperator.ORDER:
+            # Single Child using order 1 crossover
+            children = self.OrderOneCrossover(parentA.copy(), parentB.copy())
 
         for child in children:
             if random.random() > mutationRate:
@@ -99,43 +109,15 @@ class EvolutionaryAlgorithm:
 
         return children
 
-    def OrderOneCrossover(self, parentA, parentB):
-        """Crossover using Order 1 crossover from http://www.rubicite.com/Tutorials/GeneticAlgorithms/CrossoverOperators/Order1CrossoverOperator.aspx
-    
-        Arguments:
-            parentA {[list]} -- copy of first parent chromosome.
-            parentB {[list]} -- copy of second parent chromosome.
-        
-        Returns:
-            list -- single recombined child chromosome.
-        """
-
-        halfLen = int(len(parentA)/2)
-
-        child = [None]*10
-        droppedAlleles = []
-
-        dropdownStartIndex = random.randint(0, halfLen)
-        dropdownEndIndex = dropdownStartIndex + 5
-
-        for genIndex in range(dropdownStartIndex, dropdownEndIndex):
-            child[genIndex] = parentA[genIndex]
-            droppedAlleles.append(parentA[genIndex])
-
-        for gen in droppedAlleles:
-            if gen in parentB:
-                parentB.remove(gen)
-        
-        for genIndex in range(len(child)):
-            if child[genIndex] == None:
-                child[genIndex] = parentB[0]
-                parentB.remove(parentB[0])
-
-        return [child]
-
-    def SwapCrossover(self, parentA, parentB):
+    def SwapCrossover(self, parentA: list, parentB: list):
         """ Perform multipoint swap crossover operator over two chromosomes. Crossover positions are determined randomly.
 
+        Arguments:
+            parentA {list} -- Chromosome one.
+            parentB {list} -- Chromesome two.
+
+        Returns:
+            list -- New generated chromosome.
         """
         childA = [None for i in range(len(parentA))]
         childB = [None for i in range(len(parentA))]
@@ -168,7 +150,41 @@ class EvolutionaryAlgorithm:
 
         return [childA, childB]
 
-    def Mutate(self, chromosome):
+    def OrderOneCrossover(self, parentA: list, parentB: list):
+        """ Crossover using Order 1 crossover based on http://www.rubicite.com/Tutorials/GeneticAlgorithms/CrossoverOperators/Order1CrossoverOperator.aspx
+
+        Arguments:
+            parentA {[list]} -- Copy of first parent chromosome.
+            parentB {[list]} -- Copy of second parent chromosome.
+
+        Returns:
+            list -- Single recombined child chromosome.
+        """
+
+        halfLen = int(len(parentA)/2)
+
+        child = [None] * 10
+        droppedAlleles = []
+
+        dropdownStartIndex = random.randint(0, halfLen)
+        dropdownEndIndex = dropdownStartIndex + 5
+
+        for genIndex in range(dropdownStartIndex, dropdownEndIndex):
+            child[genIndex] = parentA[genIndex]
+            droppedAlleles.append(parentA[genIndex])
+
+        for gen in droppedAlleles:
+            if gen in parentB:
+                parentB.remove(gen)
+
+        for genIndex in range(len(child)):
+            if child[genIndex] == None:
+                child[genIndex] = parentB[0]
+                parentB.remove(parentB[0])
+
+        return [child]
+
+    def Mutate(self, chromosome: list):
         """ Mutate a chromosome randomly.
 
         Arguments:
@@ -194,13 +210,14 @@ class EvolutionaryAlgorithm:
 
         return child
 
-    def GenerateNewGeneration(self, retainPercentage, randomSelection, mutationRate):
+    def GenerateNewGeneration(self, retainPercentage: float, randomSelection: float, mutationRate: float, crossoverOp=CrossoverOperator.SWAP):
         """ Generate an new population.
 
         Arguments:
             retainPercentage {float} -- Percentage of indiviuals to retain in the new population. Input must be between 0.0 and 1.0
             mutationChance {float} -- Chance of mutation. Must be between 0.0 and 1.0
             randomSelection {float} -- Chance that an indiviual is retained. Must be between 0.0 and 1.0
+            crossoverOperator {CrossoverOperator} -- Selected crossover operator.
 
         Returns:
             list -- New population, also stored within self.population
@@ -238,7 +255,7 @@ class EvolutionaryAlgorithm:
 
             # Perform crossover to generate new children.
             children += self.CreateChildChromosomes(
-                parents[parentA], parents[parentB], mutationRate)
+                parents[parentA], parents[parentB], mutationRate, crossoverOp)
 
         # Remove overflow of children
         for _i in range(abs(amountOfChildren - len(children))):
@@ -283,7 +300,7 @@ def main():
         EA = EvolutionaryAlgorithm(populationSize)
         for j in range(generations):
             EA.GenerateNewGeneration(
-                retainPercentage, selectionChancePercentage, mutationRate)
+                retainPercentage, selectionChancePercentage, mutationRate, CrossoverOperator.SWAP)
         print("Attempt\t", i + 1, "\tTotal Fitness:\t",
               EA.GetGenerationFitness(), "\tafter\t", j+1, "\tgenerations")
         bestOfPop = EA.GetBestOfPopulation()
