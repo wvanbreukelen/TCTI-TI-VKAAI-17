@@ -1,3 +1,11 @@
+"""
+Evolutionary Algorithm (exercise 6.1: cards problem) implementation by Kevin Nijmeijer and Wiebe van Breukelen.
+
+We've chosen to implement this exercise using an order-based crossover operator as we are dealing with an ordening problem.
+Mutation is performed by randomlity selecting genes within the chromosome. 
+"""
+
+
 import random
 from functools import reduce
 
@@ -59,7 +67,13 @@ class EvolutionaryAlgorithm:
         return abs(36 - sumPileOne) + abs(360 - sumPileTwo)
 
     def CalculatePopulationFitness(self):
-        return [(self.CalculateFitness(chromosome), chromosome) for chromosome in self.population]
+        """Calculate all fitnesses for all chromosomes within the population.
+
+        Returns:
+            tuple -- Tuple containing the fitness and chromosome itself.
+        """
+
+        return ((self.CalculateFitness(chromosome), chromosome) for chromosome in self.population)
 
     def CreateChildChromosomes(self, parentA, parentB, mutationRate):
         """ Create a new child chromosomes based on two parents.
@@ -82,7 +96,7 @@ class EvolutionaryAlgorithm:
         return children
 
     def Crossover(self, parentA, parentB):
-        """ Perform crossover over two chromosomes. Crossover positions are determined randomly.
+        """ Perform order-based crossover over two chromosomes. Crossover positions are determined randomly.
 
         Arguments:
             parentA {list} -- Chromosome one.
@@ -92,11 +106,12 @@ class EvolutionaryAlgorithm:
             list -- New generated chromosome.
         """
 
-        crossoverPositions = []
         childA = [None for i in range(len(parentA))]
         childB = [None for i in range(len(parentA))]
         parentACopy = parentA.copy()
         parentBCopy = parentB.copy()
+
+        crossoverPositions = []
 
         # Determine unique crossover positions.
         while int(len(parentA) / 2) > len(crossoverPositions):
@@ -105,7 +120,7 @@ class EvolutionaryAlgorithm:
             if index not in crossoverPositions:
                 crossoverPositions.append(index)
 
-        # Perform crossover.
+        # Perform order-based crossover.
         for i in range(int(len(parentA) / 2)):
             childA[crossoverPositions[i]] = parentA[crossoverPositions[i]]
             childB[crossoverPositions[i]] = parentB[crossoverPositions[i]]
@@ -123,13 +138,10 @@ class EvolutionaryAlgorithm:
         return [childA, childB]
 
     def Mutate(self, chromosome):
-        """ Mutate a chromosome.
+        """ Mutate a chromosome randomly.
 
         Arguments:
             chromosome {list} -- Chromosome representation.
-
-        Raises:
-            ValueError -- [description]
 
         Returns:
             list -- Mutated chromosome.
@@ -145,13 +157,9 @@ class EvolutionaryAlgorithm:
         while(oldGeneValue == newGeneValue):
             newGeneValue = random.randint(1, 10)
 
-        if newGeneValue in child:
-            swapIndex = child.index(newGeneValue)
-            child[mutationIndex] = newGeneValue
-            child[swapIndex] = oldGeneValue
-        else:
-            # Chromosome does not contain a mutating gene anymore, so throw an exception.
-            raise ValueError("Invalid chromosome: {}".format(chromosome))
+        swapIndex = child.index(newGeneValue)
+        child[mutationIndex] = newGeneValue
+        child[swapIndex] = oldGeneValue
 
         return child
 
@@ -159,7 +167,7 @@ class EvolutionaryAlgorithm:
         """ Generate an new population.
 
         Arguments:
-            retainPercentage {float} -- Percentage of indiviuals to retain in the new population. Input must be between 0% and 100%
+            retainPercentage {float} -- Percentage of indiviuals to retain in the new population. Input must be between 0.0 and 1.0
             mutationChance {float} -- Chance of mutation. Must be between 0.0 and 1.0
             randomSelection {float} -- Chance that an indiviual is retained. Must be between 0.0 and 1.0
 
@@ -171,11 +179,11 @@ class EvolutionaryAlgorithm:
         sortedPopulation = sorted(self.CalculatePopulationFitness())
 
         # Calculate the amount of genes to retain based on the retain percentage.
-        if retainPercentage == 0:
+        if retainPercentage <= 0.0:
             amountToRetain = 0
         else:
             amountToRetain = int(len(sortedPopulation) /
-                                 (100 / retainPercentage))
+                                 (1 / retainPercentage))
 
         parents = []
         children = []
@@ -202,7 +210,7 @@ class EvolutionaryAlgorithm:
                 parents[parentA], parents[parentB], mutationRate)
 
         # Remove overflow of children
-        for i in range(abs(amountOfChildren - len(children))):
+        for _i in range(abs(amountOfChildren - len(children))):
             children.pop()
 
         self.population = parents + children
@@ -234,11 +242,9 @@ class EvolutionaryAlgorithm:
 
 def main():
     attempts = 20
-    generations = 100
-    # populationSize = 50
+    generations = 50
     populationSize = 100
-    retainPercentage = 50
-    # mutationChancePercentage = 0.1
+    retainPercentage = 0.5
     selectionChancePercentage = 0.1
     mutationRate = 0.1
 
