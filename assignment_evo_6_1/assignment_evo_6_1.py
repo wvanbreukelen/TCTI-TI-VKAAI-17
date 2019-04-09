@@ -1,7 +1,7 @@
 """
 Evolutionary Algorithm (exercise 6.1: cards problem) implementation by Kevin Nijmeijer and Wiebe van Breukelen.
 
-We've chosen to implement this exercise using an order-based crossover operator as we are dealing with an ordening problem.
+We've chosen to implement this exercise using an multipoint swap crossover operator as we are dealing with an ordening problem.
 Mutation is performed by randomlity selecting genes within the chromosome. 
 """
 
@@ -87,7 +87,7 @@ class EvolutionaryAlgorithm:
             list -- New child chromosome.
         """
 
-        children = self.Crossover(parentA.copy(), parentB.copy())
+        children = self.SwapCrossover(parentA.copy(), parentB.copy())
 
         for child in children:
             if random.random() > mutationRate:
@@ -95,8 +95,8 @@ class EvolutionaryAlgorithm:
 
         return children
 
-    def Crossover(self, parentA, parentB):
-        """ Perform order-based crossover over two chromosomes. Crossover positions are determined randomly.
+    def SwapCrossover(self, parentA, parentB):
+        """ Perform multipoint swap crossover operator over two chromosomes. Crossover positions are determined randomly.
 
         Arguments:
             parentA {list} -- Chromosome one.
@@ -120,7 +120,7 @@ class EvolutionaryAlgorithm:
             if index not in crossoverPositions:
                 crossoverPositions.append(index)
 
-        # Perform order-based crossover.
+        # Perform swap crossover.
         for i in range(int(len(parentA) / 2)):
             childA[crossoverPositions[i]] = parentA[crossoverPositions[i]]
             childB[crossoverPositions[i]] = parentB[crossoverPositions[i]]
