@@ -73,30 +73,47 @@ class EvolutionaryAlgorithm:
             list -- New child chromosome.
         """
 
-        child = self.Crossover(parentA.copy(), parentB.copy())
+        # child = self.Crossover(parentA.copy(), parentB.copy())
+        child = self.CrossoverSingle(parentA.copy(), parentB.copy())
 
         if random.random() > mutationChance:
             child = self.Mutate(child)
 
         return child
 
-    def Crossover(self, parentA, parentB):
-        """ Perform single-point crossover over two chromosomes. Slice point is the exact middle of the chromosome.
-
+    def CrossoverSingle(self, parentA, parentB):
+        """Crossover using Order 1 crossover from http://www.rubicite.com/Tutorials/GeneticAlgorithms/CrossoverOperators/Order1CrossoverOperator.aspx
+        
         Arguments:
-            parentA {list} -- Chromosome one.
-            parentB {list} -- Chromesome two.
-
+            parentA {[list]} -- copy of first parent chromosome.
+            parentB {[list]} -- copy of second parent chromosome.
+        
         Returns:
-            list -- New generated chromosome.
+            list -- single recombined child chromosome.
         """
 
-        sliceIndex = int(len(parentA) / 2)
+        halfLen = int(len(parentA)/2)
 
-        partA = parentA[:sliceIndex]
-        partB = parentB[sliceIndex:]
+        child = [None]*10
+        droppedAlleles = []
 
-        return partA + partB
+        dropdownStartIndex = random.randint(0, halfLen)
+        dropdownEndIndex = dropdownStartIndex + 5
+
+        for genIndex in range(dropdownStartIndex, dropdownEndIndex):
+            child[genIndex] = parentA[genIndex]
+            droppedAlleles.append(parentA[genIndex])
+
+        for gen in droppedAlleles:
+            if gen in parentB:
+                parentB.remove(gen)
+        
+        for genIndex in range(len(child)):
+            if child[genIndex] == None:
+                child[genIndex] = parentB[0]
+                parentB.remove(parentB[0])
+
+        return child
 
     def Mutate(self, chromosome):
         """ Mutate a chromosome.
