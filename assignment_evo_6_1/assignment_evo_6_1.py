@@ -126,9 +126,8 @@ class EvolutionaryAlgorithm:
             child[mutationIndex] = newGeneValue
             child[swapIndex] = oldGeneValue
         else:
-            pass
             # Chromosome does not contain a mutating gene anymore, so throw an exception.
-            #raise ValueError("Invalid chromosome: {}".format(chromosome))
+            raise ValueError("Invalid chromosome: {}".format(chromosome))
 
         return child
 
