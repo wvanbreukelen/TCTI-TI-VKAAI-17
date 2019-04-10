@@ -1,3 +1,14 @@
+"""
+Assignment 4.2 Neural Networks By Kevin Nijmeijer and Wiebe van Breukelen
+
+The functions in this assignment were checked by hand multiple times to ensure that the mathematics were correct, which they were.
+This assignments works properly with the XOR data from the earlier assignment (Code is in the main aswell). 
+We've also tried a different activation function (Sigmoid), however this did not improve the results. 
+There are cases where this code reaches the 95% validation mark, but the results fluctuate too much over multiple runs.
+Multiple attempts were made to check where the issue with calculation could lie, but in the end we could not find the problem.
+"""
+
+
 import math
 import random
 import numpy as np
@@ -7,7 +18,7 @@ from math import e
 
 class Neuron:
     """
-    Abstract Data Type for a neuron.
+    Abstract Data Type for a Neuron.
 
     """
 
@@ -53,7 +64,7 @@ class Neuron:
         """
 
         if self.isPresetNeuron:
-            return
+            raise ValueError("Unable to calculate output for preset neuron!")
 
         if len(inputs) != len(self.weights):
             raise Exception(
@@ -65,13 +76,19 @@ class Neuron:
         for index in range(len(self.inputs)):
             self.output += self.inputs[index] * self.weights[index]
 
-        # self.output = math.tanh(self.output) 
-        self.output = sigmoid(self.output)
-
+        self.output = math.tanh(self.output)
+        # self.output = sigmoid(self.output)
 
     def __str__(self):
-        return "Input weights: {}\nInput values: {}\nOutput: {}\nIs preset: {}\nError: {}\n".format(
-            self.weights, self.inputs, self.output, self.isPresetNeuron, self.error)
+        output = str([round(weight, 4) for weight in self.weights])
+
+        if self.output:
+            output += " -> Output: " + str(round(self.output, 4))
+
+        if self.error:
+            output += ", Error: " + str(round(self.error, 4))
+
+        return output
 
 
 class NeuronLayer:
@@ -94,9 +111,11 @@ class NeuronLayer:
         """
 
         if len(defaultOutputs):
+            self.isInputLayer = True
             self.neurons = [Neuron(defaultOutputs[i])
                             for i in range(neuronAmount)]
         else:
+            self.isInputLayer = False
             self.neurons = [Neuron()
                             for i in range(neuronAmount)]
 
@@ -107,9 +126,12 @@ class NeuronLayer:
             inputs {list} -- Preset outputs as a list.
         """
 
+        if not self.isInputLayer:
+            raise ValueError(
+                "Cannot invoke SetOutputs(), layer is not a input layer.")
+
         for i in range(len(inputs)):
             self.neurons[i].output = inputs[i]
-            self.neurons[i].isPresetNeuron = True
 
     def GetOutput(self) -> list:
         """ Get the output of all neurons within the layer.
@@ -132,33 +154,19 @@ class NeuronLayer:
         """
 
         for neuron in self.neurons:
-            neuron.CalculateOutput(inputs)
-
-    def isPresetLayer(self) -> bool:
-        """ Returns if the layer is a preset layer.
-
-        For example, the input layer of a neural network is preset.
-
-        Returns:
-            bool -- Is a preset layer.
-        """
-
-        for neuron in self.neurons:
             if not neuron.isPresetNeuron:
-                return False
-        return True
+                neuron.CalculateOutput(inputs)
 
     def __repr__(self) -> str:
-        print("Is preset layer: {}\n".format(self.isPresetLayer()))
-
+        print("Neuron weights: ", end='')
         for neuron in self.neurons:
-            print(neuron)
+            print(neuron, end=' ')
 
         return str()
 
 
 class NeuralNetwork:
-    """ 
+    """
     Object oriented style neural network implementation.
 
     """
@@ -199,7 +207,7 @@ class NeuralNetwork:
             self.InitializeWeightsBetweenLayers(
                 self.hiddenLayers[hiddenLayerIndex], self.hiddenLayers[hiddenLayerIndex + 1])
 
-        # link final hidden layer and output layer
+        # Link final hidden layer and output layer
         self.InitializeWeightsBetweenLayers(
             self.hiddenLayers[len(self.hiddenLayers) - 1], self.outputLayer)
 
@@ -208,15 +216,15 @@ class NeuralNetwork:
         Perform a feed forward operation upon the network.
 
         """
-        #Calculate the first hidden layer
+        # Calculate the first hidden layer
         self.hiddenLayers[0].CalculateOutputs(self.inputLayer.GetOutput())
 
-        #Calculate other hidden layers
+        # Calculate other hidden layers
         for hiddenLayerIndex in range(1, len(self.hiddenLayers)):
             self.hiddenLayers[hiddenLayerIndex].CalculateOutputs(
                 self.hiddenLayers[hiddenLayerIndex - 1].GetOutput())
 
-        #Calculate output layer
+        # Calculate output layer
         self.outputLayer.CalculateOutputs(
             self.hiddenLayers[len(self.hiddenLayers) - 1].GetOutput())
 
@@ -229,7 +237,7 @@ class NeuralNetwork:
             nextLayer {NeuronLayer} -- Next linked layer.
         """
 
-        #for every neuron in the current hidden layer
+        # for every neuron in the current hidden layer
         for currentNeuronIndex in range(len(currentHiddenLayer.neurons)):
             sumOfErrors = 0.0
             currentNeuron = currentHiddenLayer.neurons[currentNeuronIndex]
@@ -237,15 +245,18 @@ class NeuralNetwork:
             for previousNeuronIndex in range(len(previousLayer.neurons)):
                 previousNeuron = previousLayer.neurons[previousNeuronIndex]
                 if not previousNeuron.isPresetNeuron:
-                    sumOfErrors += previousNeuron.weights[currentNeuronIndex] * previousNeuron.error
+                    sumOfErrors += previousNeuron.weights[currentNeuronIndex] * \
+                        previousNeuron.error
 
                     previousNeuron.weights[currentNeuronIndex] += self.learnRate * \
                         currentNeuron.output * previousNeuron.error
 
-            # currentNeuron.error = (1-(math.tanh(currentNeuron.output))) * sumOfErrors
-            currentNeuron.error = derivative_sigmoid(currentNeuron.output)* sumOfErrors
-            
-            if nextLayer.isPresetLayer():
+            currentNeuron.error = (
+                1-(math.tanh(currentNeuron.output))) * sumOfErrors
+            # currentNeuron.error = derivative_sigmoid(
+            #    currentNeuron.output) * sumOfErrors
+
+            if nextLayer.isInputLayer:
                 for weightIndex in range(len(nextLayer.neurons)):
                     if not currentNeuron.isPresetNeuron:
                         currentNeuron.weights[weightIndex] += self.learnRate * \
@@ -264,8 +275,10 @@ class NeuralNetwork:
             currentNeuron = self.outputLayer.neurons[index]
 
             # For each output neuron, we calculate the error by performing the logistic function over the difference in expected output.
-            # currentNeuron.error = ( 1 - (math.tanh(currentNeuron.output)))*(realOutput[index] - currentNeuron.output)
-            currentNeuron.error = derivative_sigmoid(currentNeuron.output)*(realOutput[index] - currentNeuron.output)
+            currentNeuron.error = (
+                1 - (math.tanh(currentNeuron.output))) * (realOutput[index] - currentNeuron.output)
+            # currentNeuron.error = derivative_sigmoid(
+            #    currentNeuron.output)*(realOutput[index] - currentNeuron.output)
 
         # Calculate errors for the hidden layers and the input layer.
         for hiddenLayerIndex in range(len(self.hiddenLayers) - 1, -1, -1):
@@ -282,10 +295,9 @@ class NeuralNetwork:
             else:
                 nextLayer = self.inputLayer
 
+            # Weights are also set in this function.
             self.CalculateErrorBetweenLayers(
                 currentHiddenLayer, previousLayer, nextLayer)
-
-        # Set new weights between input and hidden
 
     def Train(self, trainingSet: np.array, expectedOutputs: list, iterations: int, validationData, validationOutputs):
         """ Train the network a given number of iterations using a training set and the desired outputs.
@@ -300,12 +312,11 @@ class NeuralNetwork:
 
         for it in range(iterations):
             nrOfCorrect = 0
-            print("Iteration {}".format(it))
+            print("--> Iteration {}".format(it))
             for dataIndex in range(len(trainingSet)):
                 self.inputLayer.SetOutputs(trainingSet[dataIndex])
                 self.FeedForward()
                 self.BackPropagate(expectedOutputs[dataIndex])
-            
 
             MSE = 0.0
             for dataIndex in range(len(validationData)):
@@ -313,15 +324,15 @@ class NeuralNetwork:
 
                 localError = 0.0
                 for outputIndex in range(len(processedOutput)):
-                    localError += (validationOutputs[dataIndex][outputIndex] - processedOutput[outputIndex])**2
-                
-                MSE += localError/len(processedOutput) 
-                
-                if IsCorrect(processedOutput,validationOutputs[dataIndex]):
+                    localError += (validationOutputs[dataIndex]
+                                   [outputIndex] - processedOutput[outputIndex])**2
+
+                MSE += localError/len(processedOutput)
+
+                if IsCorrect(processedOutput, validationOutputs[dataIndex]):
                     nrOfCorrect += 1
-            
-            correctness.append(nrOfCorrect/len(validationData)*100)
-                
+
+            correctness.append(nrOfCorrect/len(validationData) * 100)
 
             MSE = MSE/len(validationData)
             errorHistogram.append(MSE)
@@ -339,7 +350,7 @@ class NeuralNetwork:
         # Initialize random weights from layerTwo to layerOne.
         for layerTwoNeuron in layerTwo.neurons:
             if not layerTwoNeuron.isPresetNeuron:
-                for layerOneNeuron in layerOne.neurons:
+                for _layerOneNeuron in layerOne.neurons:
                     layerTwoNeuron.AddInputWeight(random.uniform(0.01, 1))
 
                     weightIndex += 1
@@ -364,16 +375,16 @@ class NeuralNetwork:
         return outputs
 
     def __repr__(self):
-        print("INPUT LAYER")
+        print("\nINPUT LAYER:    ", end='')
         print(self.inputLayer)
 
-        print("HIDDEN LAYER")
-        print(self.hiddenLayers)
+        for x in range(len(self.hiddenLayers)):
+            print("HIDDEN LAYER {}: ".format(x + 1), end='')
 
-        print("OUTPUT LAYER")
-        print(self.outputLayer)
+            print(self.hiddenLayers[x])
 
-        return str()
+        print("OUTPUT LAYER:   ", end='')
+        print(self.outputLayer, end='\n\n')
 
 
 def ParseIrisDataset(file, parseLabels=True):
@@ -427,36 +438,45 @@ def ConvertLabelsToExpectedOutputs(labels: list):
 
     return expectedOutputs
 
+
 def IsCorrect(testResult, expectedResult):
+    """ Check if the solution is correct by using the most vote strategy.
+
+    Arguments:
+        testResult {list} -- List of outputs out of the output layer.
+        expectedResult {list} -- List of expected outputs.
+
+    Returns:
+        bool -- Is correct solution
+    """
+
     iTest = testResult.index(max(testResult))
     iExpected = expectedResult.index(max(expectedResult))
 
-    if iTest == iExpected:
-        return True
-    else:
-        return False
+    return iTest == iExpected
 
 
 def sigmoid(x):
     """Standard sigmoid; since it relies on ** to do computation, it broadcasts on vectors and matrices"""
     return 1 / (1 - (e**(-x)))
 
+
 def derivative_sigmoid(x):
     """Expects input x to be already sigmoid-ed"""
     return x * (1 - x)
 
+
 def main():
+    learnRate = 0.05
+    iterations = 350
+    hiddenNeurons = [5, 3]
 
-    learnRate = 0.01
-    iterations = 500
-    hiddenNeurons = [5,3]
+    #xorData = [[0,0],[0,1],[1,0],[1,1],[1,0],[1,1],[1,1],[0,1],[1,0],[0,0]]
 
-    xorData = [[0,0],[0,1],[1,0],[1,1],[1,0],[1,1],[1,1],[0,1],[1,0],[0,0]]
+    #xorOutputs = [[0],[1],[1],[0],[1],[0],[0],[1],[1],[0]]
 
-    xorOutputs = [[0],[1],[1],[0],[1],[0],[0],[1],[1],[0]]
-
-    xorTestData = [[0,1],[0,0],[0,1],[1,1],[1,0]]
-    xorTestOutput = [[1],[0],[1],[0],[1]]
+    #xorTestData = [[0,1],[0,0],[0,1],[1,1],[1,0]]
+    #xorTestOutput = [[1],[0],[1],[0],[1]]
 
     outputs = 3
     bias = -1
@@ -467,19 +487,19 @@ def main():
     zippedInput = list(zip(dataset, labels))
 
     arrayIndex = 0
-    
+
     splitInput = [[]]
 
     for index in range(0, len(zippedInput)):
-        if index != len(zippedInput) -1:
+        if index != len(zippedInput) - 1:
             splitInput[arrayIndex].append(zippedInput[index])
             if zippedInput[index][1] != zippedInput[index + 1][1]:
-                
+
                 splitInput.append([])
                 arrayIndex += 1
         else:
             splitInput[arrayIndex].append(zippedInput[index])
-        
+
     validationData = []
     validationLabels = []
 
@@ -487,7 +507,6 @@ def main():
     labels = []
 
     for irisType in splitInput:
-        # random.seed(12345)
         random.shuffle(irisType)
         valD, valL = zip(*irisType[:validationSetSize])
         d, l = zip(*irisType[validationSetSize:])
@@ -496,7 +515,6 @@ def main():
         validationLabels += valL
         dataset += d
         labels += l
-    # random.seed()
 
     zippedInput = list(zip(dataset, labels))
     random.shuffle(zippedInput)
@@ -507,9 +525,10 @@ def main():
 
     nn = NeuralNetwork(learnRate, dataset,
                        hiddenNeurons, outputs, bias)
-    errorHistogram, correctness = nn.Train(dataset, expectedOutputs, iterations, validationData, expectedValidationOutput)
+    errorHistogram, correctness = nn.Train(
+        dataset, expectedOutputs, iterations, validationData, expectedValidationOutput)
 
-        # Plot scree.
+    # Plot scree.
     plt.subplot(2, 1, 1)
     plt.plot(np.array(range(iterations)), errorHistogram)
     plt.title('MSE')
@@ -526,8 +545,21 @@ def main():
 
     plt.show()
 
+    """    
+    Attempts with a XOR NN training were successfull:
+
+    random.seed(12345)
+
+    nn = NeuralNetwork(learnRate, xorData, hiddenNeurons, 1, bias)
+
+    errorHistogram, correctness = nn.Train(xorData, xorOutputs, iterations, xorTestData, xorTestOutput)
+
+    nn = NeuralNetwork(learnRate, [[1, 1]], [2, 2], 1, -1)
+
+    errorHistogram, correctness = nn.Train([[1, 1]], [[0]], 1, [[1, 1]], [[0]])
+    """
+
 
 # Invoke the main function.
 if __name__ == "__main__":
     main()
-
